@@ -1,4 +1,4 @@
-## Front-End Challenge: React Application with MUI
+﻿## Front-End Challenge: React Application with MUI
 
 In addition to the backend, build a React front-end that interacts with your API, using **MUI (Material-UI)** components from `mui.com`.
 

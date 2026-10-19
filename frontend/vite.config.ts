@@ -10,7 +10,18 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/graphql': { target: api, changeOrigin: true },
-      '/recipes': { target: api, changeOrigin: true },
+      // Recipe pages live at /recipes/:id. Only forward API calls; a browser
+      // navigation must stay on the React app so refresh and shared links work.
+      '/recipes': {
+        target: api,
+        changeOrigin: true,
+        bypass(req) {
+          const accept = req.headers.accept ?? '';
+          if (accept.includes('text/html')) {
+            return '/index.html';
+          }
+        },
+      },
       '/cuisines': { target: api, changeOrigin: true },
       '/users': { target: api, changeOrigin: true },
       '/auth': { target: api, changeOrigin: true },

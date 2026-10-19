@@ -1,21 +1,26 @@
 import { useMutation, useQuery } from '@apollo/client';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import { errorMessage } from '../api/errors';
 import { useAuth } from '../auth/AuthProvider';
+import { CuisineChip } from '../components/CuisineChip';
+import { MenuRule } from '../components/MenuRule';
 import { MethodSteps } from '../components/MethodSteps';
 import { ShoppingList } from '../components/ShoppingList';
+import { useLook } from '../LookProvider';
+import { panelSx } from '../theme';
 import { ADD_FAVORITE, FAVORITE_IDS_QUERY, RECIPE_QUERY } from '../graphql/operations';
 import type { Recipe } from '../types';
 
 export function DetailPage() {
   const { session } = useAuth();
+  const look = useLook();
   const userId = session?.user.id ?? '';
   const { id = '' } = useParams();
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -46,7 +51,21 @@ export function DetailPage() {
 
   return (
     <Box>
-      <Button component={RouterLink} to="/" sx={{ mb: 2 }}>
+      <Button
+        component={RouterLink}
+        to="/"
+        startIcon={<ArrowBackIcon />}
+        sx={{
+          mb: 1.5,
+          px: 1,
+          color: look.ink,
+          ...(look.nav === 'journal'
+            ? { fontFamily: look.fonts.note, fontSize: '1.35rem', fontWeight: 700 }
+            : look.nav === 'editorial'
+              ? { fontSize: '0.72rem', letterSpacing: '0.16em', textTransform: 'uppercase' }
+              : { bgcolor: look.field, px: 1.75 }),
+        }}
+      >
         All recipes
       </Button>
 
@@ -64,19 +83,31 @@ export function DetailPage() {
         <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '1.1fr 0.9fr' } }}>
           {recipe.imageUrl ? (
             <Box
-              component="img"
-              src={recipe.imageUrl}
-              alt=""
-              sx={{ width: '100%', borderRadius: 3, aspectRatio: '16 / 10', objectFit: 'cover' }}
-            />
+              sx={{
+                bgcolor: look.card.surface,
+                p: look.card.mat,
+                borderRadius: look.card.radius,
+                boxShadow: look.card.shadow,
+                overflow: 'hidden',
+                transform: look.card.tilt ? 'rotate(-0.8deg)' : 'none',
+              }}
+            >
+              <Box
+                component="img"
+                src={recipe.imageUrl}
+                alt=""
+                sx={{ width: '100%', borderRadius: look.card.photoRadius, aspectRatio: '16 / 10', objectFit: 'cover', display: 'block' }}
+              />
+            </Box>
           ) : (
-            <Box sx={{ borderRadius: 3, aspectRatio: '16 / 10', bgcolor: 'primary.main' }} />
+            <Box sx={{ ...panelSx(look), aspectRatio: '16 / 10' }} />
           )}
           <Box>
-            <Chip label={recipe.cuisine} variant="outlined" color="primary" sx={{ mb: 1 }} />
-            <Typography variant="h1" sx={{ fontSize: { xs: '2rem', md: '2.8rem' }, mb: 1 }}>
+            <CuisineChip cuisine={recipe.cuisine} flagHeight={16} />
+            <Typography variant="h1" sx={{ fontSize: look.nav === 'dock' ? { xs: '2rem', md: '2.8rem' } : { xs: '2.4rem', md: '3.4rem' }, mt: 1.25, lineHeight: 1.05 }}>
               {recipe.name}
             </Typography>
+            <MenuRule />
             <Typography color="text.secondary" sx={{ mb: 2 }}>
               {recipe.preparationTimeMinutes} min · {recipe.difficulty} · estimate
               {recipe.nutrition

@@ -3,6 +3,8 @@ import Checkbox from '@mui/material/Checkbox';
 import LinearProgress from '@mui/material/LinearProgress';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
+import { useLook } from '../LookProvider';
+import { panelSx } from '../theme';
 import type { Ingredient } from '../types';
 
 type ShoppingListProps = {
@@ -10,6 +12,7 @@ type ShoppingListProps = {
 };
 
 export function ShoppingList({ ingredients }: ShoppingListProps) {
+  const look = useLook();
   const [checked, setChecked] = useState<boolean[]>(() => ingredients.map(() => false));
   const packed = checked.filter(Boolean).length;
   const total = ingredients.length;
@@ -22,15 +25,13 @@ export function ShoppingList({ ingredients }: ShoppingListProps) {
   return (
     <Box
       sx={{
-        bgcolor: 'background.paper',
-        border: '1px solid #e4dccb',
-        borderRadius: 3,
+        ...panelSx(look),
         p: 2.5,
         position: { md: 'sticky' },
-        top: 88,
+        top: { xs: 0, md: 96 },
       }}
     >
-      <Typography variant="h3" sx={{ fontSize: '1.5rem' }}>
+      <Typography variant="h3">
         Shopping list
       </Typography>
       <Typography color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
@@ -41,7 +42,7 @@ export function ShoppingList({ ingredients }: ShoppingListProps) {
           variant="determinate"
           value={(packed / total) * 100}
           aria-label={`${packed} of ${total} ingredients packed`}
-          sx={{ mb: 2, height: 6, borderRadius: 99, bgcolor: '#e7efe9' }}
+          sx={{ mb: 2, height: 6, borderRadius: 99 }}
         />
       ) : null}
       <Box component="ul" aria-label="Shopping list" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gap: 1 }}>
@@ -61,8 +62,8 @@ export function ShoppingList({ ingredients }: ShoppingListProps) {
                   py: 0.75,
                   borderRadius: 2,
                   border: '1px solid',
-                  borderColor: isChecked ? 'transparent' : '#e4dccb',
-                  bgcolor: isChecked ? '#f6f1e7' : '#fff',
+                  borderColor: isChecked ? 'transparent' : look.row.border,
+                  bgcolor: isChecked ? look.row.checkedBg : look.row.bg,
                   cursor: 'pointer',
                 }}
               >
@@ -78,8 +79,8 @@ export function ShoppingList({ ingredients }: ShoppingListProps) {
                     component="span"
                     sx={{
                       fontWeight: 700,
-                      color: '#8a341f',
-                      bgcolor: '#f3d6cf',
+                      color: look.mark.measureInk,
+                      bgcolor: look.mark.measureBg,
                       borderRadius: 1,
                       px: 0.75,
                       py: 0.25,

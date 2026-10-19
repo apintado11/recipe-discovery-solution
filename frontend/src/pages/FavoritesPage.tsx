@@ -7,12 +7,17 @@ import Typography from '@mui/material/Typography';
 import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { displayName } from '../auth/session';
+import { PageHero } from '../components/PageHero';
 import { RecipeGrid } from '../components/RecipeGrid';
+import { ResultsBar } from '../components/ViewSwitcher';
 import { FAVORITES_QUERY } from '../graphql/operations';
+import { useLook } from '../LookProvider';
+import { useRecipeLayout } from '../recipe/layoutPreference';
 import type { Recipe } from '../types';
 
 export function FavoritesPage() {
   const { session } = useAuth();
+  const look = useLook();
   const userId = session?.user.id ?? '';
   const { data, loading, error } = useQuery<{ favorites: Recipe[] }>(FAVORITES_QUERY, {
     variables: { userId },
@@ -20,15 +25,13 @@ export function FavoritesPage() {
   });
   const favorites = data?.favorites ?? [];
   const savedIds = new Set(favorites.map((recipe) => recipe.id));
+  const [layout, setLayout] = useRecipeLayout();
 
   return (
     <Box>
-      <Typography variant="h1" sx={{ fontSize: { xs: '2.2rem', md: '3rem' }, mb: 1 }}>
-        Saved recipes
-      </Typography>
-      <Typography color="text.secondary" sx={{ mb: 3 }}>
+      <PageHero copy={look.copy.favorites} kicker={look.nav === 'editorial' ? 'Your collection' : undefined}>
         Favorites for {session ? displayName(session.user.username) : 'you'}.
-      </Typography>
+      </PageHero>
 
       {loading ? (
         <Box role="status" aria-live="polite" sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -50,7 +53,10 @@ export function FavoritesPage() {
       ) : null}
 
       {!loading && favorites.length > 0 ? (
-        <RecipeGrid recipes={favorites} savedIds={savedIds} savingId={null} onSave={() => undefined} />
+        <>
+          <ResultsBar countLabel={`${favorites.length} saved`} layout={layout} onLayout={setLayout} />
+          <RecipeGrid recipes={favorites} savedIds={savedIds} savingId={null} onSave={() => undefined} layout={layout} />
+        </>
       ) : null}
     </Box>
   );

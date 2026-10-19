@@ -26,4 +26,24 @@ describe('RecipeCard', () => {
     expect(screen.getByText('Italian')).toBeInTheDocument();
     expect(screen.getByText('21 min · Easy')).toBeInTheDocument();
   });
+
+  it('keeps the name and region in the compact and list layouts', () => {
+    const { rerender } = render(
+      <MemoryRouter>
+        <RecipeCard recipe={recipe} saved={false} saving={false} onSave={() => undefined} layout="compact" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Test Lemon Pasta' })).toBeInTheDocument();
+    expect(screen.getByText('Italian')).toBeInTheDocument();
+
+    rerender(
+      <MemoryRouter>
+        <RecipeCard recipe={recipe} saved={false} saving={false} onSave={() => undefined} layout="list" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Test Lemon Pasta' })).toBeInTheDocument();
+    expect(screen.getByText('21 min · Easy')).toBeInTheDocument();
+  });
 });

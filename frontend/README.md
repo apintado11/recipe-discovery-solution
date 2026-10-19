@@ -22,7 +22,11 @@ npm run build
 
 ## Design choices
 
-MUI supplies the shell and the interactive pieces: `AppBar` and `Container` for layout, `Card` for each recipe, `TextField` and `Select` for search, cuisine, ingredient, and sort, an `IconButton` on the search field, `Pagination` for the list, `CircularProgress` while a request is in flight, and `Alert` when it fails. Color and type are set in `src/theme.ts` and applied with the `sx` prop. Fraunces and Outfit are loaded from Google Fonts.
+The full requirement-by-requirement write-up and the UI rationale are in the [root README](../README.md).
+
+MUI supplies the shell and the interactive pieces: `Container` and `Box` for layout, `Card` for each recipe, `TextField` and `Select` for search, cuisine, ingredient, and sort, an `IconButton` on the search field, a `Drawer` for filters on phones, `ToggleButtonGroup` for the list, card, and compact layouts, `Pagination` for the list, `CircularProgress` while a request is in flight, and `Alert` when it fails.
+
+There are three themes: Field Journal, Cookbook Editorial, and Candlelight. Each is a token object (`Look`) in `src/theme.ts`, turned into an MUI theme by `buildTheme` and provided by `LookProvider`. Components read tokens through `useLook()` and style with `sx`, so there are no CSS files. The palette button in the header and the buttons on the login screen switch themes, and the choice is saved in `localStorage`. DM Sans, Fraunces, Instrument Serif, and Caveat are loaded from Google Fonts. Country flags come from flagcdn, because Windows does not render emoji flags.
 
 The login screen gates the routes. The token from `POST /auth/login` is kept in `sessionStorage` and attached to Axios and Apollo requests. Logging out clears that token and the Apollo cache.
 

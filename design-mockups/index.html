@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Recipe Discovery — design directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: #2b2b2b;
+    color: #eee;
+    padding: 40px 32px 64px;
+  }
+  .board { display: flex; gap: 40px; justify-content: center; flex-wrap: wrap; }
+  .col { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+  .label { text-align: center; max-width: 390px; }
+  .label h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; color: #fff; }
+  .label p { font-size: 13px; color: #b9b9b9; margin-top: 4px; line-height: 1.45; }
+  .phone {
+    width: 390px; height: 844px; border-radius: 46px; overflow: hidden; position: relative;
+    box-shadow: 0 0 0 10px #111, 0 0 0 11px #3a3a3a, 0 40px 80px rgba(0,0,0,.55);
+  }
+  .status { height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 28px; font-size: 14px; font-weight: 600; }
+  .scroll { position: absolute; inset: 44px 0 0 0; overflow: hidden; }
+  img { display: block; }
+  .phone img.flag { width: 18px !important; height: 12px !important; border-radius: 2px !important; object-fit: cover; box-shadow: 0 0 0 1px rgba(0,0,0,.12); flex: none; }
+
+  /* ---------- A · Field Journal ---------- */
+  .a {
+    --paper: #1e4a37; --ink: #f5efe2; --soft: rgba(245,239,226,.68); --line: rgba(245,239,226,.22); --gold: #e8c47c;
+    color: var(--ink);
+    background:
+      radial-gradient(120% 60% at 85% -10%, rgba(255,215,150,.20), transparent 60%),
+      radial-gradient(90% 50% at 0% 0%, rgba(190,230,200,.10), transparent 60%),
+      #1e4a37;
+  }
+  .a::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5; mix-blend-mode: soft-light;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .a .wrap { padding: 8px 22px 0; position: relative; }
+  .a .top { display: flex; justify-content: space-between; align-items: center; }
+  .a .hello { font-family: 'Caveat', cursive; font-size: 22px; color: var(--soft); }
+  .a .avatar { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--ink); display: grid; place-items: center; font-family: 'Caveat'; font-size: 20px; font-weight: 700; }
+  .a h1 { font-family: 'Instrument Serif', serif; font-weight: 400; font-size: 46px; line-height: .98; margin-top: 14px; letter-spacing: -.01em; }
+  .a h1 em { font-style: italic; color: var(--gold); }
+  .a .mountains { position: absolute; right: 8px; top: 34px; width: 150px; opacity: .85; }
+  .a .search { margin-top: 22px; display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-bottom: 1.5px solid var(--ink); }
+  .a .search span { flex: 1; font-family: 'Caveat'; font-size: 22px; color: var(--soft); }
+  .a .tune { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; }
+  .a .chips { display: flex; gap: 8px; margin: 18px -22px 0; padding: 0 22px; overflow: hidden; }
+  .a .chip { flex: none; display: flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; font-weight: 500; }
+  .a .chip.on { background: var(--ink); color: #1e4a37; border-color: var(--ink); }
+  .a .section { display: flex; justify-content: space-between; align-items: baseline; margin-top: 24px; }
+  .a .section h3 { font-family: 'Instrument Serif'; font-style: italic; font-weight: 400; font-size: 26px; }
+  .a .section small { font-size: 12px; color: var(--soft); letter-spacing: .08em; text-transform: uppercase; }
+  .a .feature { margin-top: 12px; position: relative; }
+  .a .polaroid { background: #f5efe2; padding: 8px 8px 0; border-radius: 6px; transform: rotate(-1.4deg); box-shadow: 0 18px 30px rgba(0,0,0,.28); }
+  .a .polaroid img { width: 100%; height: 190px; object-fit: cover; border-radius: 3px; }
+  .a .polaroid .cap { color: #1e3b2d; padding: 10px 6px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .a .polaroid .cap b { font-family: 'Fraunces'; font-weight: 600; font-size: 17px; }
+  .a .polaroid .cap span { font-size: 12px; color: #5d6b5f; }
+  .a .note { position: absolute; right: 14px; top: 16px; font-family: 'Caveat'; font-size: 21px; font-weight: 700; color: #1e4a37; background: #e8c47c; padding: 2px 12px 4px; transform: rotate(5deg); box-shadow: 0 6px 12px rgba(0,0,0,.25); }
+  .a .rows { margin-top: 18px; display: grid; gap: 0; }
+  .a .row { display: grid; grid-template-columns: 58px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px dashed var(--line); }
+  .a .row img { width: 58px; height: 58px; border-radius: 12px; object-fit: cover; }
+  .a .row b { font-family: 'Fraunces'; font-weight: 600; font-size: 15px; display: block; }
+  .a .row span { font-size: 12px; color: var(--soft); display: flex; gap: 6px; align-items: center; margin-top: 3px; }
+  .a .tabbar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 84px; padding: 10px 34px 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    background: linear-gradient(180deg, transparent, #173b2c 34%);
+  }
+  .a .tab { display: grid; justify-items: center; gap: 2px; font-family: 'Caveat'; font-size: 18px; color: var(--soft); }
+  .a .tab.on { color: var(--ink); }
+  .a .tab.on::after { content: ''; width: 22px; height: 6px; margin-top: -2px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 6'%3E%3Cpath d='M1 4 Q 6 1 11 3.5 T 21 2.5' fill='none' stroke='%23e8c47c' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat; }
+
+  /* ---------- B · Cookbook Editorial ---------- */
+  .b {
+    --paper: #f4eee2; --ink: #1d3a2c; --soft: #6c7468; --rule: #d9cfbb; --clay: #b4532c;
+    background: #f4eee2; color: var(--ink);
+  }
+  .b::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .35; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .48 0 0 0 0 .36 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .b .wrap { padding: 6px 22px 0; position: relative; }
+  .b .mast { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--ink); }
+  .b .mast .logo { font-family: 'Fraunces'; font-weight: 600; font-size: 19px; letter-spacing: -.01em; }
+  .b .mast .logo i { font-weight: 400; color: var(--clay); }
+  .b .mast .me { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+  .b .tabs { display: flex; gap: 22px; padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600; color: var(--soft); }
+  .b .tabs .on { color: var(--ink); box-shadow: 0 2px 0 var(--clay); padding-bottom: 6px; margin-bottom: -11px; }
+  .b .issue { margin-top: 18px; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--clay); font-weight: 700; }
+  .b h1 { font-family: 'Fraunces'; font-weight: 400; font-size: 42px; line-height: 1; letter-spacing: -.03em; margin-top: 6px; }
+  .b h1 i { font-style: italic; }
+  .b .search { margin-top: 18px; display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-radius: 999px; background: #fffaf0; box-shadow: inset 0 0 0 1px var(--rule); font-size: 14px; color: var(--soft); }
+  .b .search .f { margin-left: auto; font-size: 12px; color: var(--ink); font-weight: 600; padding-left: 12px; border-left: 1px solid var(--rule); }
+  .b .hero { margin-top: 18px; position: relative; border-radius: 4px; overflow: hidden; }
+  .b .hero img { width: 100%; height: 230px; object-fit: cover; }
+  .b .hero .tag { position: absolute; left: 12px; top: 12px; background: #f4eee2; padding: 5px 10px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; display: flex; gap: 6px; align-items: center; }
+  .b .hero-cap { padding: 12px 0 4px; display: flex; justify-content: space-between; gap: 12px; }
+  .b .hero-cap h2 { font-family: 'Fraunces'; font-weight: 600; font-size: 22px; line-height: 1.1; letter-spacing: -.01em; }
+  .b .hero-cap .heart { width: 38px; height: 38px; flex: none; border-radius: 50%; border: 1px solid var(--ink); display: grid; place-items: center; }
+  .b .meta { font-size: 12px; color: var(--soft); letter-spacing: .06em; text-transform: uppercase; }
+  .b .list { margin-top: 18px; border-top: 1px solid var(--ink); }
+  .b .item { display: grid; grid-template-columns: 34px 1fr 64px; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+  .b .item .no { font-family: 'Fraunces'; font-style: italic; font-size: 22px; color: var(--clay); }
+  .b .item b { font-family: 'Fraunces'; font-weight: 600; font-size: 15px; display: block; line-height: 1.2; }
+  .b .item span { font-size: 11px; color: var(--soft); letter-spacing: .06em; text-transform: uppercase; display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+  .b .item img { width: 64px; height: 64px; object-fit: cover; border-radius: 3px; }
+
+  /* ---------- C · Candlelight ---------- */
+  .c {
+    --bg: #0e1c16; --ink: #f3ecdf; --soft: rgba(243,236,223,.62); --glass: rgba(255,255,255,.07); --gold: #eac27c;
+    color: var(--ink);
+    background:
+      radial-gradient(70% 40% at 80% 0%, rgba(234,194,124,.22), transparent 70%),
+      radial-gradient(80% 50% at 0% 30%, rgba(46,120,86,.35), transparent 70%),
+      #0e1c16;
+  }
+  .c .wrap { padding: 8px 20px 0; }
+  .c .top { display: flex; justify-content: space-between; align-items: center; }
+  .c .top small { font-size: 13px; color: var(--soft); }
+  .c .top b { display: block; font-family: 'Fraunces'; font-weight: 600; font-size: 24px; letter-spacing: -.02em; margin-top: 2px; }
+  .c .avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #eac27c, #b8803f); color: #1a140b; display: grid; place-items: center; font-weight: 700; }
+  .c .search { margin-top: 18px; display: flex; gap: 10px; align-items: center; height: 50px; padding: 0 8px 0 16px; border-radius: 18px; background: var(--glass); border: 1px solid rgba(255,255,255,.08); backdrop-filter: blur(20px); color: var(--soft); font-size: 15px; }
+  .c .search .f { margin-left: auto; width: 36px; height: 36px; border-radius: 12px; background: var(--gold); display: grid; place-items: center; }
+  .c .seg { display: flex; gap: 8px; margin-top: 16px; overflow: hidden; margin-right: -20px; }
+  .c .seg div { flex: none; padding: 8px 14px; border-radius: 12px; background: var(--glass); font-size: 13px; font-weight: 500; display: flex; gap: 7px; align-items: center; }
+  .c .seg .on { background: var(--ink); color: #0e1c16; }
+  .c .head { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; }
+  .c .head h3 { font-size: 17px; font-weight: 600; }
+  .c .views { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--glass); }
+  .c .views i { width: 28px; height: 24px; border-radius: 7px; display: grid; place-items: center; }
+  .c .views .on { background: rgba(255,255,255,.14); }
+  .c .big { margin-top: 12px; height: 300px; border-radius: 26px; overflow: hidden; position: relative; }
+  .c .big img { width: 100%; height: 100%; object-fit: cover; }
+  .c .big::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(8,16,12,.92)); }
+  .c .big .over { position: absolute; left: 18px; right: 18px; bottom: 16px; z-index: 1; }
+  .c .pill { display: inline-flex; gap: 6px; align-items: center; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.16); backdrop-filter: blur(12px); font-size: 12px; font-weight: 600; }
+  .c .big h2 { font-family: 'Fraunces'; font-weight: 600; font-size: 25px; line-height: 1.08; letter-spacing: -.02em; margin-top: 8px; }
+  .c .big .m { display: flex; gap: 14px; margin-top: 8px; font-size: 13px; color: var(--soft); }
+  .c .big .save { position: absolute; top: 14px; right: 14px; z-index: 1; width: 40px; height: 40px; border-radius: 50%; background: rgba(0,0,0,.35); backdrop-filter: blur(12px); display: grid; place-items: center; }
+  .c .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .c .tile { border-radius: 20px; overflow: hidden; background: var(--glass); border: 1px solid rgba(255,255,255,.06); }
+  .c .tile img { width: 100%; height: 120px; object-fit: cover; }
+  .c .tile div { padding: 10px 12px 12px; }
+  .c .tile b { font-size: 14px; font-weight: 600; display: block; line-height: 1.25; }
+  .c .tile span { font-size: 12px; color: var(--soft); display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+  .c .dock {
+    position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);
+    display: flex; gap: 6px; padding: 6px; border-radius: 24px;
+    background: rgba(20,36,28,.72); backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,.1);
+    box-shadow: 0 20px 40px rgba(0,0,0,.45);
+  }
+  .c .dock div { display: flex; gap: 8px; align-items: center; padding: 10px 16px; border-radius: 18px; font-size: 14px; font-weight: 600; color: var(--soft); }
+  .c .dock .on { background: var(--ink); color: #0e1c16; }
+</style>
+</head>
+<body>
+<div class="board">
+
+  <!-- A -->
+  <div class="col">
+    <div class="phone a">
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="scroll"><div class="wrap">
+        <div class="top"><span class="hello">good evening, Alex</span><div class="avatar">A</div></div>
+        <svg class="mountains" viewBox="0 0 150 70" fill="none" stroke="#f5efe2" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="122" cy="14" r="7" />
+          <path d="M2 66 L34 30 L46 42 L70 12 L96 46 L108 36 L148 66" />
+          <path d="M70 12 L66 24 M70 12 L76 26 M34 30 L32 38 M108 36 L106 44" opacity=".7" />
+          <path d="M14 66 v-8 l-3 3 m3 -3 l3 3 M126 66 v-9 l-3 3 m3 -3 l3 3" opacity=".8"/>
+        </svg>
+        <h1>What are we<br/><em>cooking</em> tonight?</h1>
+        <div class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f5efe2" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span>chicken, pasta, stew…</span>
+          <div class="tune"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f5efe2" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></div>
+        </div>
+        <div class="chips">
+          <div class="chip on">All</div>
+          <div class="chip"><img class="flag" src="https://flagcdn.com/w40/br.png" alt="">Brazil</div>
+          <div class="chip"><img class="flag" src="https://flagcdn.com/w40/gb.png" alt="">British</div>
+          <div class="chip"><img class="flag" src="https://flagcdn.com/w40/pl.png" alt="">Polish</div>
+          <div class="chip"><img class="flag" src="https://flagcdn.com/w40/jm.png" alt="">Jamaican</div>
+        </div>
+        <div class="section"><h3>Tonight's pick</h3><small>790 recipes</small></div>
+        <div class="feature">
+          <div class="polaroid">
+            <img src="https://www.themealdb.com/images/media/meals/e2kcut1782591669.jpg" alt="">
+            <div class="cap"><b>Bahia-style Moqueca</b><span>46 min · Hard</span></div>
+          </div>
+          <div class="note">try this! ♡</div>
+        </div>
+        <div class="rows">
+          <div class="row"><img src="https://www.themealdb.com/images/media/meals/uyqrrv1511553350.jpg" alt=""><div><b>Beef Dumpling Stew</b><span><img class="flag" src="https://flagcdn.com/w40/gb.png" alt="">British · 64 min</span></div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e8c47c" stroke-width="1.7"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></div>
+          <div class="row"><img src="https://www.themealdb.com/images/media/meals/xrxz7h1782592711.jpg" alt=""><div><b>Feijoada</b><span><img class="flag" src="https://flagcdn.com/w40/br.png" alt="">Brazil · 45 min</span></div><svg width="20" height="20" viewBox="0 0 24 24" fill="#e8c47c" stroke="#e8c47c" stroke-width="1.7"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></div>
+        </div>
+      </div></div>
+      <div class="tabbar">
+        <div class="tab on"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5efe2" stroke-width="1.6"><path d="M4 5h7v14H4zM13 5h7v14h-7z"/></svg>recipes</div>
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>saved</div>
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 6h14M5 12h14M5 18h9"/></svg>list</div>
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>me</div>
+      </div>
+    </div>
+    <div class="label"><h2>A · Field Journal</h2><p>Closest to your references. Green paper, cream ink, a handwritten note or two, line-art mountains, photos as taped-in polaroids. Bottom tab bar like a native app.</p></div>
+  </div>
+
+  <!-- B -->
+  <div class="col">
+    <div class="phone b">
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="scroll"><div class="wrap">
+        <div class="mast"><div class="logo">Recipe <i>Discovery</i></div><div class="me">Alex ↗</div></div>
+        <div class="tabs"><span class="on">Recipes</span><span>Favorites</span><span>Shopping</span></div>
+        <div class="issue">Vol. 790 · Autumn kitchen</div>
+        <h1>Slow food for<br/><i>long evenings.</i></h1>
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d3a2c" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          Search 790 recipes
+          <span class="f">Filters · 2</span>
+        </div>
+        <div class="hero">
+          <img src="https://www.themealdb.com/images/media/meals/md8w601593348504.jpg" alt="">
+          <div class="tag"><img class="flag" src="https://flagcdn.com/w40/pl.png" alt="">Polish</div>
+        </div>
+        <div class="hero-cap">
+          <div><h2>Bigos, the hunter's stew</h2><div class="meta" style="margin-top:6px">67 min · Hard · 6 servings</div></div>
+          <div class="heart"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d3a2c" stroke-width="1.7"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></div>
+        </div>
+        <div class="list">
+          <div class="item"><span class="no">02</span><div><b>Bahia-style Moqueca prawn stew</b><span><img class="flag" src="https://flagcdn.com/w40/br.png" alt="">Brazil · 46 min</span></div><img src="https://www.themealdb.com/images/media/meals/e2kcut1782591669.jpg" alt=""></div>
+          <div class="item"><span class="no">03</span><div><b>Brown Stew Chicken</b><span><img class="flag" src="https://flagcdn.com/w40/jm.png" alt="">Jamaican · 49 min</span></div><img src="https://www.themealdb.com/images/media/meals/sypxpx1515365095.jpg" alt=""></div>
+        </div>
+      </div></div>
+    </div>
+    <div class="label"><h2>B · Cookbook Editorial</h2><p>A printed cookbook or food magazine. Warm paper, deep green ink, a terracotta accent, big serif headlines, numbered recipes and thin rules. Calm and premium.</p></div>
+  </div>
+
+  <!-- C -->
+  <div class="col">
+    <div class="phone c">
+      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="scroll"><div class="wrap">
+        <div class="top"><div><small>Good evening</small><b>Alex's kitchen</b></div><div class="avatar">A</div></div>
+        <div class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f3ecdf" stroke-width="1.8" opacity=".7"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          Search recipes
+          <div class="f"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a140b" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></div>
+        </div>
+        <div class="seg">
+          <div class="on">All</div>
+          <div><img class="flag" src="https://flagcdn.com/w40/br.png" alt="">Brazil</div>
+          <div><img class="flag" src="https://flagcdn.com/w40/no.png" alt="">Norway</div>
+          <div><img class="flag" src="https://flagcdn.com/w40/bw.png" alt="">Botswana</div>
+          <div><img class="flag" src="https://flagcdn.com/w40/pl.png" alt="">Polish</div>
+        </div>
+        <div class="head"><h3>790 recipes</h3>
+          <div class="views">
+            <i><svg width="14" height="14" viewBox="0 0 24 24" fill="#f3ecdf" opacity=".6"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg></i>
+            <i class="on"><svg width="14" height="14" viewBox="0 0 24 24" fill="#f3ecdf"><rect x="3" y="3" width="18" height="10" rx="2"/><rect x="3" y="15" width="8" height="6" rx="1.5"/><rect x="13" y="15" width="8" height="6" rx="1.5"/></svg></i>
+            <i><svg width="14" height="14" viewBox="0 0 24 24" fill="#f3ecdf" opacity=".6"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></i>
+          </div>
+        </div>
+        <div class="big">
+          <img src="https://www.themealdb.com/images/media/meals/xrxz7h1782592711.jpg" alt="">
+          <div class="save"><svg width="18" height="18" viewBox="0 0 24 24" fill="#eac27c" stroke="#eac27c" stroke-width="1.7"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></div>
+          <div class="over">
+            <span class="pill"><img class="flag" src="https://flagcdn.com/w40/br.png" alt="">Brazil</span>
+            <h2>Black bean &amp; meat stew — feijoada</h2>
+            <div class="m"><span>◷ 45 min</span><span>◆ Medium</span><span>9 ingredients</span></div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="tile"><img src="https://www.themealdb.com/images/media/meals/6vi2cv1763075785.jpg" alt=""><div><b>Brun Lapskaus</b><span><img class="flag" src="https://flagcdn.com/w40/no.png" alt="">42 min · Medium</span></div></div>
+          <div class="tile"><img src="https://www.themealdb.com/images/media/meals/k07k271782502861.jpg" alt=""><div><b>Beef pumpkin Stew</b><span><img class="flag" src="https://flagcdn.com/w40/bw.png" alt="">49 min · Hard</span></div></div>
+        </div>
+      </div></div>
+      <div class="dock">
+        <div class="on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0e1c16" stroke-width="2"><path d="M4 5h7v14H4zM13 5h7v14h-7z"/></svg>Recipes</div>
+        <div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>Saved</div>
+        <div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 6h14M5 12h14M5 18h9"/></svg></div>
+      </div>
+    </div>
+    <div class="label"><h2>C · Candlelight</h2><p>A sleek modern app at night. Near-black forest green, candle-gold accent, full-bleed photo cards with frosted-glass overlays and a floating dock. Most "premium app," least handwritten.</p></div>
+  </div>
+
+</div>
+</body>
+</html>

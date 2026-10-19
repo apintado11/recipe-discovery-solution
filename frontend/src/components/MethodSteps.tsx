@@ -3,17 +3,21 @@ import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import { useRef, useState } from 'react';
 import { highlightParts, parseSteps, type HighlightKind } from '../recipe/parseMethod';
+import { useLook } from '../LookProvider';
+import { panelSx, type Look } from '../theme';
 
 type MethodStepsProps = {
   description: string;
 };
 
-const HIGHLIGHT_STYLE: Record<HighlightKind, { color: string; backgroundColor: string }> = {
-  time: { color: '#1f4d3a', backgroundColor: '#d7e6df' },
-  measure: { color: '#8a341f', backgroundColor: '#f3d6cf' },
-};
+function highlightStyle(look: Look, kind: HighlightKind) {
+  return kind === 'time'
+    ? { color: look.mark.timeInk, backgroundColor: look.mark.timeBg }
+    : { color: look.mark.measureInk, backgroundColor: look.mark.measureBg };
+}
 
 export function MethodSteps({ description }: MethodStepsProps) {
+  const look = useLook();
   const steps = parseSteps(description);
   const [active, setActive] = useState(0);
   const [seenDescription, setSeenDescription] = useState(description);
@@ -39,10 +43,11 @@ export function MethodSteps({ description }: MethodStepsProps) {
         if (event.key === 'ArrowRight' && current < steps.length - 1) focusStep(current + 1);
         if (event.key === 'ArrowLeft' && current > 0) focusStep(current - 1);
       }}
+      sx={{ ...panelSx(look), p: { xs: 2, md: 2.5 } }}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <Box>
-          <Typography variant="h3" sx={{ fontSize: '1.5rem' }}>
+          <Typography variant="h3">
             Method
           </Typography>
           <Typography color="text.secondary" sx={{ mt: 0.5 }}>
@@ -52,8 +57,8 @@ export function MethodSteps({ description }: MethodStepsProps) {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }} aria-hidden="true">
-          <Legend swatch="#d7e6df" label="Time" />
-          <Legend swatch="#f3d6cf" label="Amount" />
+          <Legend swatch={look.mark.timeBg} ink={look.mark.timeInk} label="Time" />
+          <Legend swatch={look.mark.measureBg} ink={look.mark.measureInk} label="Amount" />
         </Box>
       </Box>
 
@@ -89,22 +94,21 @@ export function MethodSteps({ description }: MethodStepsProps) {
                 font: 'inherit',
                 color: 'inherit',
                 cursor: 'pointer',
-                borderRadius: 3,
+                borderRadius: look.panel.radius === '4px' ? '4px' : '14px',
                 p: 2,
                 border: '2px solid',
-                borderColor: selected ? 'primary.main' : '#e4dccb',
-                bgcolor: selected ? '#fffdf8' : 'background.paper',
-                boxShadow: selected ? '0 8px 24px rgba(31, 77, 58, 0.08)' : 'none',
-                opacity: selected ? 1 : 0.78,
+                borderColor: selected ? look.row.selectedBorder : look.row.border,
+                bgcolor: selected ? look.row.selectedBg : look.row.bg,
+                boxShadow: selected && look.mode === 'dark' ? '0 12px 28px rgba(0, 0, 0, 0.28)' : 'none',
               }}
             >
               <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'baseline' }}>
                 <Typography
                   component="span"
                   sx={{
-                    fontFamily: '"Fraunces", Georgia, serif',
-                    fontWeight: 560,
-                    color: 'primary.main',
+                    fontFamily: look.fonts.title,
+                    fontWeight: 600,
+                    color: look.accent,
                     fontSize: '1.15rem',
                   }}
                 >
@@ -130,6 +134,7 @@ export function MethodSteps({ description }: MethodStepsProps) {
 }
 
 export function HighlightedText({ text }: { text: string }) {
+  const look = useLook();
   const parts = highlightParts(text);
   return (
     <>
@@ -142,8 +147,7 @@ export function HighlightedText({ text }: { text: string }) {
               fontWeight: 700,
               px: 0.5,
               borderRadius: 0.75,
-              color: HIGHLIGHT_STYLE[part.kind].color,
-              backgroundColor: HIGHLIGHT_STYLE[part.kind].backgroundColor,
+              ...highlightStyle(look, part.kind),
             }}
           >
             {part.text}
@@ -156,10 +160,10 @@ export function HighlightedText({ text }: { text: string }) {
   );
 }
 
-function Legend({ swatch, label }: { swatch: string; label: string }) {
+function Legend({ swatch, ink, label }: { swatch: string; ink: string; label: string }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-      <Box sx={{ width: 14, height: 14, borderRadius: 0.5, bgcolor: swatch, border: '1px solid rgba(31, 26, 23, 0.12)' }} />
+      <Box sx={{ width: 14, height: 14, borderRadius: 0.5, bgcolor: swatch, border: `1px solid ${ink}` }} />
       <Typography variant="body2" color="text.secondary">
         {label}
       </Typography>
