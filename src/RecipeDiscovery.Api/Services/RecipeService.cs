@@ -69,7 +69,14 @@ public sealed class RecipeService : IRecipeService
 
     public async Task<RecipePage> SearchAsync(RecipeQuery query, CancellationToken cancellationToken)
     {
-        query = RecipeQuery.Create(query.Cuisine, query.Ingredient, query.Search, query.Page, query.PageSize);
+        query = RecipeQuery.Create(
+            query.Cuisine,
+            query.Ingredient,
+            query.Search,
+            query.Page,
+            query.PageSize,
+            query.Sort,
+            query.Direction);
         var catalog = await EnsureCatalogAsync(cancellationToken);
 
         string? cuisine = null;
@@ -111,6 +118,8 @@ public sealed class RecipeService : IRecipeService
 
             selected.Add(recipe);
         }
+
+        selected.Sort((left, right) => CompareRecipes(left, right, query.Sort, query.Direction));
 
         return new RecipePage
         {
@@ -190,6 +199,34 @@ public sealed class RecipeService : IRecipeService
             PageSize = query.PageSize,
             Total = 0,
             Items = []
+        };
+    }
+
+    private static int CompareRecipes(Recipe left, Recipe right, string sort, string direction)
+    {
+        var comparison = sort switch
+        {
+            RecipeQuery.SortPrepTime => left.PreparationTimeMinutes.CompareTo(right.PreparationTimeMinutes),
+            RecipeQuery.SortDifficulty => DifficultyRank(left.Difficulty).CompareTo(DifficultyRank(right.Difficulty)),
+            _ => string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase)
+        };
+
+        if (comparison == 0)
+        {
+            comparison = string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return direction == "desc" ? -comparison : comparison;
+    }
+
+    private static int DifficultyRank(string difficulty)
+    {
+        return difficulty switch
+        {
+            "Easy" => 0,
+            "Medium" => 1,
+            "Hard" => 2,
+            _ => 3
         };
     }
 

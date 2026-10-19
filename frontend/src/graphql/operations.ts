@@ -13,6 +13,10 @@ const RECIPE_FIELDS = gql`
       name
       measure
     }
+    nutrition {
+      calories
+      protein
+    }
   }
 `;
 

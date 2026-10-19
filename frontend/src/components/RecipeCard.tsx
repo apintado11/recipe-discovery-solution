@@ -45,6 +45,11 @@ export function RecipeCard({ recipe, saved, saving, onSave }: RecipeCardProps) {
           <Typography variant="body2" color="text.secondary">
             {recipe.preparationTimeMinutes} min · {recipe.difficulty}
           </Typography>
+          {recipe.nutrition ? (
+            <Typography variant="body2" color="text.secondary">
+              {Math.round(recipe.nutrition.calories)} kcal · {recipe.nutrition.protein} g protein
+            </Typography>
+          ) : null}
           {preview ? (
             <Typography variant="body2" sx={{ mt: 1 }}>
               {preview}

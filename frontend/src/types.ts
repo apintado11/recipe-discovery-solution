@@ -3,6 +3,11 @@ export type Ingredient = {
   measure: string;
 };
 
+export type Nutrition = {
+  calories: number;
+  protein: number;
+};
+
 export type Recipe = {
   id: string;
   name: string;
@@ -12,6 +17,7 @@ export type Recipe = {
   preparationTimeMinutes: number;
   difficulty: string;
   imageUrl?: string | null;
+  nutrition?: Nutrition | null;
 };
 
 export type RecipePage = {

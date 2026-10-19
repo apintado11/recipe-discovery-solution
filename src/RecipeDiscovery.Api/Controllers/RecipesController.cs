@@ -22,10 +22,12 @@ public sealed class RecipesController : ControllerBase
         [FromQuery] string? search,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = RecipeQuery.DefaultPageSize,
+        [FromQuery] string? sort = null,
+        [FromQuery] string? direction = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _recipes.SearchAsync(
-            RecipeQuery.Create(cuisine, ingredient, search, page, pageSize),
+            RecipeQuery.Create(cuisine, ingredient, search, page, pageSize, sort, direction),
             cancellationToken);
         return Ok(result);
     }

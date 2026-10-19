@@ -13,6 +13,7 @@ public sealed class ApiExceptionHandler : IExceptionHandler
         var (status, title) = exception switch
         {
             NotFoundException => (StatusCodes.Status404NotFound, "Not found"),
+            ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden"),
             MealDbUnavailableException => (StatusCodes.Status503ServiceUnavailable, "Recipe source unavailable"),
             _ => (0, "")
         };

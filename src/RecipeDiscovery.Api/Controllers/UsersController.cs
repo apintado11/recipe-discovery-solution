@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RecipeDiscovery.Api.Contracts;
 using RecipeDiscovery.Api.Services;
@@ -5,6 +7,7 @@ using RecipeDiscovery.Api.Services;
 namespace RecipeDiscovery.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("users")]
 public sealed class UsersController : ControllerBase
 {
@@ -20,7 +23,14 @@ public sealed class UsersController : ControllerBase
     {
         try
         {
-            return Ok(await _favorites.GetFavoritesAsync(userId, cancellationToken));
+            return Ok(await _favorites.GetFavoritesAsync(userId, CallerId(), cancellationToken));
+        }
+        catch (ForbiddenException exception)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                title: "Forbidden",
+                detail: exception.Message);
         }
         catch (NotFoundException exception)
         {
@@ -46,8 +56,15 @@ public sealed class UsersController : ControllerBase
 
         try
         {
-            var favorites = await _favorites.AddFavoriteAsync(userId, request.RecipeId, cancellationToken);
+            var favorites = await _favorites.AddFavoriteAsync(userId, CallerId(), request.RecipeId, cancellationToken);
             return Ok(favorites);
+        }
+        catch (ForbiddenException exception)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                title: "Forbidden",
+                detail: exception.Message);
         }
         catch (NotFoundException exception)
         {
@@ -56,5 +73,10 @@ public sealed class UsersController : ControllerBase
                 title: "Not found",
                 detail: exception.Message);
         }
+    }
+
+    private string CallerId()
+    {
+        return User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
     }
 }

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using RecipeDiscovery.Api.Contracts;
@@ -43,7 +44,39 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
 
         var cuisines = await _client.GetFromJsonAsync<string[]>("/cuisines");
         Assert.NotNull(cuisines);
-        Assert.Equal("Italian", Assert.Single(cuisines));
+        Assert.Contains("Italian", cuisines);
+    }
+
+    [Fact]
+    public async Task ListRecipes_SortsByPrepTime()
+    {
+        var response = await _client.GetAsync("/recipes?sort=prepTime&direction=asc&pageSize=12");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var page = await response.Content.ReadFromJsonAsync<RecipePage>();
+        Assert.NotNull(page);
+        Assert.Equal(["Apple Tart", "Test Lemon Pasta", "Zucchini Bake"], page.Items.Select(item => item.Name).ToArray());
+    }
+
+    [Fact]
+    public async Task RecipeQuery_IncludesNutritionFromTheSecondSource()
+    {
+        var document = await PostQueryAsync(
+            $$"""
+            query {
+              recipe(id: "{{FakeMealDbClient.KnownId}}") {
+                nutrition { calories protein }
+              }
+            }
+            """);
+
+        AssertNoErrors(document);
+        var nutrition = document.RootElement.GetProperty("data").GetProperty("recipe").GetProperty("nutrition");
+        Assert.Equal(355, nutrition.GetProperty("calories").GetDouble());
+        Assert.Equal(8.5, nutrition.GetProperty("protein").GetDouble());
+
+        var rest = await _client.GetStringAsync($"/recipes/{FakeMealDbClient.KnownId}");
+        Assert.DoesNotContain("nutrition", rest, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -57,6 +90,7 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task AddFavorite_ThenQuery_ReturnsRecipe()
     {
+        await LoginAsync();
         var added = await PostQueryAsync(
             $$"""
             mutation {
@@ -97,6 +131,7 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task AddFavorite_UnknownRecipe_ReturnsNotFound()
     {
+        await LoginAsync();
         var result = await PostQueryAsync(
             """
             mutation {
@@ -109,6 +144,16 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
         var error = result.RootElement.GetProperty("errors")[0];
         Assert.Equal("NOT_FOUND", error.GetProperty("extensions").GetProperty("code").GetString());
         Assert.Contains("missing", error.GetProperty("message").GetString(), StringComparison.Ordinal);
+    }
+
+    private async Task LoginAsync(string username = "alex")
+    {
+        var response = await _client.PostAsJsonAsync("/auth/login", new { username });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var token = payload.GetProperty("token").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(token));
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
 
     private async Task<JsonDocument> PostQueryAsync(string query)

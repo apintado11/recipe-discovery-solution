@@ -1,17 +1,32 @@
+using RecipeDiscovery.Api.Auth;
+
 namespace RecipeDiscovery.Api.Services;
 
 public sealed class FavoriteStore
 {
-    private readonly ConcurrentDictionary<string, string> _users = new(StringComparer.Ordinal)
-    {
-        ["1"] = "demo"
-    };
+    private readonly DemoUser[] _users =
+    [
+        new("1", "alex"),
+        new("2", "blair"),
+        new("3", "casey")
+    ];
 
     private readonly ConcurrentDictionary<string, List<string>> _favorites = new(StringComparer.Ordinal);
 
+    public IReadOnlyList<DemoUser> List()
+    {
+        return _users;
+    }
+
+    public DemoUser? FindByUsername(string username)
+    {
+        var key = username.Trim();
+        return _users.FirstOrDefault(user => user.Username.Equals(key, StringComparison.OrdinalIgnoreCase));
+    }
+
     public bool UserExists(string userId)
     {
-        return _users.ContainsKey(userId);
+        return _users.Any(user => user.Id == userId);
     }
 
     public void Add(string userId, string recipeId)

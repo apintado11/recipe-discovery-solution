@@ -12,7 +12,7 @@ public sealed class GraphQlHttpResponseFormatter : DefaultHttpResponseFormatter
         HttpStatusCode? proposedStatusCode)
     {
         if (result.Errors is { Count: > 0 } &&
-            result.Errors.All(error => error.Code is "NOT_FOUND" or "RECIPE_SOURCE_UNAVAILABLE"))
+            result.Errors.All(error => error.Code is "NOT_FOUND" or "FORBIDDEN" or "RECIPE_SOURCE_UNAVAILABLE"))
         {
             return HttpStatusCode.OK;
         }

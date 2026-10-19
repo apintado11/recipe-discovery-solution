@@ -1,4 +1,5 @@
 using HotChocolate;
+using RecipeDiscovery.Api.Auth;
 using RecipeDiscovery.Api.Contracts;
 using RecipeDiscovery.Api.Services;
 
@@ -12,11 +13,20 @@ public sealed class Query
         string? search,
         int? page,
         int? pageSize,
+        string? sort,
+        string? direction,
         [Service] IRecipeService recipes,
         CancellationToken cancellationToken)
     {
         return recipes.SearchAsync(
-            RecipeQuery.Create(cuisine, ingredient, search, page ?? 1, pageSize ?? RecipeQuery.DefaultPageSize),
+            RecipeQuery.Create(
+                cuisine,
+                ingredient,
+                search,
+                page ?? 1,
+                pageSize ?? RecipeQuery.DefaultPageSize,
+                sort,
+                direction),
             cancellationToken);
     }
 
@@ -37,8 +47,9 @@ public sealed class Query
     public Task<IReadOnlyList<Recipe>> GetFavorites(
         [ID] string userId,
         [Service] IFavoriteService favorites,
+        [Service] IHttpContextAccessor http,
         CancellationToken cancellationToken)
     {
-        return favorites.GetFavoritesAsync(userId, cancellationToken);
+        return favorites.GetFavoritesAsync(userId, CurrentUser.RequireId(http), cancellationToken);
     }
 }

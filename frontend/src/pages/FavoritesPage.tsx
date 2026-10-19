@@ -5,14 +5,18 @@ import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { Link as RouterLink } from 'react-router-dom';
+import { useAuth } from '../auth/AuthProvider';
+import { displayName } from '../auth/session';
 import { RecipeGrid } from '../components/RecipeGrid';
 import { FAVORITES_QUERY } from '../graphql/operations';
 import type { Recipe } from '../types';
-import { USER_ID } from '../user';
 
 export function FavoritesPage() {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
   const { data, loading, error } = useQuery<{ favorites: Recipe[] }>(FAVORITES_QUERY, {
-    variables: { userId: USER_ID },
+    variables: { userId },
+    skip: userId.length === 0,
   });
   const favorites = data?.favorites ?? [];
   const savedIds = new Set(favorites.map((recipe) => recipe.id));
@@ -23,7 +27,7 @@ export function FavoritesPage() {
         Saved recipes
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3 }}>
-        Favorites for user {USER_ID}.
+        Favorites for {session ? displayName(session.user.username) : 'you'}.
       </Typography>
 
       {loading ? (

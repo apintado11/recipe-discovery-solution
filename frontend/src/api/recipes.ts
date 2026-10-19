@@ -5,6 +5,8 @@ export type RecipeFilters = {
   cuisine?: string;
   ingredient?: string;
   search?: string;
+  sort?: string;
+  direction?: string;
   page: number;
   pageSize?: number;
 };
@@ -22,6 +24,12 @@ export async function fetchRecipes(filters: RecipeFilters, signal?: AbortSignal)
   }
   if (filters.search) {
     params.search = filters.search;
+  }
+  if (filters.sort) {
+    params.sort = filters.sort;
+  }
+  if (filters.direction) {
+    params.direction = filters.direction;
   }
 
   const { data } = await api.get<RecipePage>('/recipes', { params, signal });

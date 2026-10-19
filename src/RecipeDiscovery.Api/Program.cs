@@ -1,5 +1,6 @@
 using Microsoft.OpenApi.Models;
 using RecipeDiscovery.Api;
+using RecipeDiscovery.Api.Auth;
 using RecipeDiscovery.Api.GraphQL;
 using RecipeDiscovery.Api.MealDb;
 using RecipeDiscovery.Api.Services;
@@ -13,6 +14,12 @@ if (!string.IsNullOrWhiteSpace(port))
 }
 
 builder.Services.AddProblemDetails();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddAuthentication(DemoAuthHandler.SchemeName)
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, DemoAuthHandler>(
+        DemoAuthHandler.SchemeName,
+        _ => { });
+builder.Services.AddAuthorization();
 builder.Services.AddHttpResponseFormatter<GraphQlHttpResponseFormatter>();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddControllers();
@@ -36,8 +43,10 @@ builder.Services.AddHttpClient<IMealDbClient, MealDbClient>(client =>
 
 builder.Services.AddSingleton<RecipeCache>();
 builder.Services.AddSingleton<FavoriteStore>();
+builder.Services.AddSingleton<DemoTokenService>();
 builder.Services.AddSingleton<IRecipeService, RecipeService>();
 builder.Services.AddSingleton<IFavoriteService, FavoriteService>();
+builder.Services.AddSingleton<INutritionSource, NutritionSource>();
 
 builder.Services.AddCors(options =>
 {
@@ -66,6 +75,8 @@ app.UseExceptionHandler();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors("frontend");
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGet("/", () => Results.Ok(new
 {

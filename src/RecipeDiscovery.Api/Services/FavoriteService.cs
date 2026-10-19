@@ -13,9 +13,12 @@ public sealed class FavoriteService : IFavoriteService
         _recipes = recipes;
     }
 
-    public async Task<IReadOnlyList<Recipe>> GetFavoritesAsync(string userId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<Recipe>> GetFavoritesAsync(
+        string userId,
+        string callerId,
+        CancellationToken cancellationToken)
     {
-        var key = RequireUser(userId);
+        var key = RequireOwnUser(userId, callerId);
         var ids = _store.Get(key);
         var recipes = new List<Recipe>(ids.Count);
         foreach (var id in ids)
@@ -32,10 +35,11 @@ public sealed class FavoriteService : IFavoriteService
 
     public async Task<IReadOnlyList<Recipe>> AddFavoriteAsync(
         string userId,
+        string callerId,
         string recipeId,
         CancellationToken cancellationToken)
     {
-        var key = RequireUser(userId);
+        var key = RequireOwnUser(userId, callerId);
         if (string.IsNullOrWhiteSpace(recipeId))
         {
             throw new NotFoundException("Recipe id is required.");
@@ -48,12 +52,18 @@ public sealed class FavoriteService : IFavoriteService
         }
 
         _store.Add(key, recipe.Id);
-        return await GetFavoritesAsync(key, cancellationToken);
+        return await GetFavoritesAsync(key, key, cancellationToken);
     }
 
-    private string RequireUser(string userId)
+    private string RequireOwnUser(string userId, string callerId)
     {
         var key = userId.Trim();
+        var caller = callerId.Trim();
+        if (!string.Equals(key, caller, StringComparison.Ordinal))
+        {
+            throw new ForbiddenException("You can only use your own favorites.");
+        }
+
         if (!_store.UserExists(key))
         {
             throw new NotFoundException($"User '{key}' was not found.");

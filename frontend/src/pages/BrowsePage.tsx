@@ -1,7 +1,10 @@
 import { useMutation, useQuery } from '@apollo/client';
+import SearchIcon from '@mui/icons-material/Search';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
 import MenuItem from '@mui/material/MenuItem';
 import Pagination from '@mui/material/Pagination';
 import TextField from '@mui/material/TextField';
@@ -9,17 +12,30 @@ import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import { errorMessage } from '../api/errors';
 import { fetchCuisines, fetchRecipes } from '../api/recipes';
+import { useAuth } from '../auth/AuthProvider';
+import { displayName } from '../auth/session';
 import { RecipeGrid } from '../components/RecipeGrid';
 import { ADD_FAVORITE, FAVORITE_IDS_QUERY } from '../graphql/operations';
 import type { RecipePage } from '../types';
-import { USER_ID } from '../user';
+
+const SORTS = [
+  { value: 'name:asc', label: 'Name (A–Z)' },
+  { value: 'name:desc', label: 'Name (Z–A)' },
+  { value: 'prepTime:asc', label: 'Prep time (short)' },
+  { value: 'prepTime:desc', label: 'Prep time (long)' },
+  { value: 'difficulty:asc', label: 'Difficulty (easy first)' },
+  { value: 'difficulty:desc', label: 'Difficulty (hard first)' },
+];
 
 const PAGE_SIZE = 12;
 
 export function BrowsePage() {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
   const [searchInput, setSearchInput] = useState('');
   const [ingredientInput, setIngredientInput] = useState('');
   const [cuisine, setCuisine] = useState('');
+  const [sortChoice, setSortChoice] = useState('name:asc');
   const [page, setPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [debouncedIngredient, setDebouncedIngredient] = useState('');
@@ -30,7 +46,8 @@ export function BrowsePage() {
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const favoritesQuery = useQuery<{ favorites: { id: string }[] }>(FAVORITE_IDS_QUERY, {
-    variables: { userId: USER_ID },
+    variables: { userId },
+    skip: userId.length === 0,
   });
   const [addFavorite] = useMutation(ADD_FAVORITE);
 
@@ -61,11 +78,14 @@ export function BrowsePage() {
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
+    const [sort, direction] = sortChoice.split(':');
     fetchRecipes(
       {
         cuisine,
         ingredient: debouncedIngredient,
         search: debouncedSearch,
+        sort,
+        direction,
         page,
         pageSize: PAGE_SIZE,
       },
@@ -88,7 +108,7 @@ export function BrowsePage() {
         }
       });
     return () => controller.abort();
-  }, [cuisine, debouncedIngredient, debouncedSearch, page]);
+  }, [cuisine, debouncedIngredient, debouncedSearch, page, sortChoice]);
 
   const savedIds = new Set((favoritesQuery.data?.favorites ?? []).map((favorite) => favorite.id));
   const pageCount = recipes ? Math.max(1, Math.ceil(recipes.total / recipes.pageSize)) : 1;
@@ -98,7 +118,7 @@ export function BrowsePage() {
     setError(null);
     try {
       await addFavorite({
-        variables: { userId: USER_ID, recipeId },
+        variables: { userId, recipeId },
         refetchQueries: ['FavoriteIds', 'Favorites'],
       });
     } catch (saveError: unknown) {
@@ -114,10 +134,11 @@ export function BrowsePage() {
         Find a meal worth cooking
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3, maxWidth: 640 }}>
-        Recipes come from TheMealDB. Prep time and difficulty are estimates. Favorites are saved for user {USER_ID}.
+        Recipes come from TheMealDB. Prep time and difficulty are estimates. Favorites are saved for{' '}
+        {session ? displayName(session.user.username) : 'you'}.
       </Typography>
 
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1.4fr 1fr 1fr' }, mb: 3 }}>
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1.3fr 1fr 1fr 1fr' }, mb: 3 }}>
         <TextField
           label="Search"
           value={searchInput}
@@ -125,7 +146,28 @@ export function BrowsePage() {
             setSearchInput(event.target.value);
             setPage(1);
           }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              setDebouncedSearch(searchInput.trim());
+            }
+          }}
           placeholder="Chicken, pasta, stew"
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="Search recipes"
+                  edge="end"
+                  onClick={() => {
+                    setDebouncedSearch(searchInput.trim());
+                    setPage(1);
+                  }}
+                >
+                  <SearchIcon />
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
         />
         <TextField
           select
@@ -153,6 +195,21 @@ export function BrowsePage() {
           placeholder="chicken breast"
           helperText="Matches an ingredient name, such as chicken breast"
         />
+        <TextField
+          select
+          label="Sort"
+          value={sortChoice}
+          onChange={(event) => {
+            setSortChoice(event.target.value);
+            setPage(1);
+          }}
+        >
+          {SORTS.map((option) => (
+            <MenuItem key={option.value} value={option.value}>
+              {option.label}
+            </MenuItem>
+          ))}
+        </TextField>
       </Box>
 
       {error ? (

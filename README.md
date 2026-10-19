@@ -25,34 +25,42 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. The Vite dev server proxies `/recipes`, `/cuisines`, `/users`, and `/graphql` to the API. To call the API from another origin, set `VITE_API_URL` (see `frontend/.env.example`). The API allows `http://localhost:5173`.
+Open `http://localhost:5173`. The first screen is a quick login for Alex, Blair, or Casey. Each person has their own favorites. Log out from the bar to switch users. The Vite dev server proxies `/auth`, `/recipes`, `/cuisines`, `/users`, and `/graphql` to the API. To call the API from another origin, set `VITE_API_URL` (see `frontend/.env.example`). The API allows `http://localhost:5173`.
 
 Tests:
 
 ```bash
 dotnet test
+cd frontend && npm test
 ```
 
 ## What the UI calls
 
 | Page | Protocol | Call |
 | --- | --- | --- |
-| Browse | REST | `GET /recipes` and `GET /cuisines` |
+| Sign in | REST | `POST /auth/login` |
+| Browse, search, sort | REST | `GET /recipes` and `GET /cuisines` |
 | Save a favorite | GraphQL | `addFavorite` |
-| Recipe detail | GraphQL | `recipe(id)` |
+| Recipe detail, including nutrition | GraphQL | `recipe(id)` |
 | Favorites | GraphQL | `favorites(userId)` |
 
-The signed-in user is hardcoded as `"1"` (`demo`).
+The UI will not show recipes until you pick a demo user. Favorite routes require that user's token. Recipe reads stay open so the samples below work without one.
 
 ## Sample requests
 
 ```bash
-curl "http://localhost:5080/recipes?cuisine=Italian&page=1&pageSize=12"
+curl "http://localhost:5080/recipes?cuisine=Italian&sort=prepTime&direction=asc&page=1&pageSize=12"
 curl "http://localhost:5080/recipes/52772"
+
+TOKEN=$(curl -s -X POST "http://localhost:5080/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alex"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+
 curl -X POST "http://localhost:5080/users/1/favorites" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"recipeId":"52772"}'
-curl "http://localhost:5080/users/1/favorites"
+curl -H "Authorization: Bearer $TOKEN" "http://localhost:5080/users/1/favorites"
 ```
 
 ```graphql
@@ -68,6 +76,10 @@ query RecipeById {
     ingredients {
       name
       measure
+    }
+    nutrition {
+      calories
+      protein
     }
   }
 }
@@ -88,7 +100,7 @@ mutation SaveFavorite {
 }
 ```
 
-Paste those into `http://localhost:5080/graphql`. A missing recipe or user returns a GraphQL error with code `NOT_FOUND`. The same miss on REST is HTTP 404. If TheMealDB cannot be reached, REST returns 503.
+Paste the recipe query into `http://localhost:5080/graphql`. Favorite queries and the `addFavorite` mutation need the login token: in the GraphQL IDE, set the header `Authorization: Bearer <token>` using the token from `POST /auth/login`. A missing recipe returns a GraphQL error with code `NOT_FOUND`. The same miss on REST is HTTP 404. A favorite call for someone else is HTTP 403, or GraphQL code `FORBIDDEN`. A favorite call with no token is HTTP 401. If TheMealDB cannot be reached, REST returns 503.
 
 ## Design choices
 
@@ -107,7 +119,13 @@ TheMealDB meals and this API's recipes are different shapes. A meal has `idMeal`
 
 Prep time and difficulty are estimates, computed once when the recipe is cached. The browse page says so.
 
-Favorites are a separate store. User `1` is created at startup. Saving a favorite checks that the recipe id resolves, then stores the id. Adding the same id again does not duplicate it.
+Lists can be sorted by name, prep time, or difficulty, ascending or descending, with `sort` and `direction` on REST and GraphQL. Paging happens after the sort.
+
+`nutrition` is a GraphQL field, not a REST property. The recipe resolver loads the meal from the catalog. A separate field resolver calls `NutritionSource`, a small ingredient table, and adds calories and protein. TheMealDB is not asked for nutrition. The detail page shows those numbers and labels them as estimates.
+
+Sign-in is a JWT-style HMAC token, not a password system. `GET /auth/users` lists Alex (`1`), Blair (`2`), and Casey (`3`). `POST /auth/login` with `{ "username": "alex" }` returns a token that expires in 12 hours. The UI stores it in `sessionStorage` and sends `Authorization: Bearer` on later calls. Favorite routes require that token, and the user id in the request has to match the token. Logging out clears the token and the Apollo cache, so the next person starts from their own list.
+
+Favorites are a separate store. Saving a favorite checks that the recipe id resolves, then stores the id. Adding the same id again does not duplicate it.
 
 REST controllers and HotChocolate resolvers both call `RecipeService` and `FavoriteService`. GraphQL is not a second server. It is the `/graphql` endpoint on this host.
 
@@ -117,7 +135,7 @@ TheMealDB area list includes countries that have no meals, so the app does not u
 
 After that warm-up:
 
-- List, search, cuisine, and ingredient filters run on the in-memory catalog. Ingredient text matches an ingredient name. Search matches a recipe name.
+- List, search, cuisine, ingredient, and sort run on the in-memory catalog. Ingredient text matches an ingredient name. Search matches a recipe name.
 - The list is paged after filtering (12 by default, 24 maximum).
 - `GET /recipes/{id}` and `recipe(id)` return the cached recipe. An id that was not in the catalog still uses `lookup.php` once, behind a per-id lock, and is stored for next time.
 
@@ -135,7 +153,7 @@ The request path already depends on `RecipeService`, so the fill strategy can ch
 ## Projects
 
 - `src/RecipeDiscovery.Api` — ASP.NET Core 8, REST, HotChocolate, TheMealDB client, memory cache, favorites
-- `tests/RecipeDiscovery.Api.Tests` — xUnit. `WebApplicationFactory` covers `GET /recipes/{id}` (hit and 404) and the `addFavorite` mutation. A fake TheMealDB client keeps the tests offline. Mapper tests lock the difficulty estimate.
-- `frontend` — Vite, React, TypeScript, MUI, Axios, Apollo Client
+- `tests/RecipeDiscovery.Api.Tests` — xUnit. `WebApplicationFactory` covers `GET /recipes/{id}` (hit and 404), sorting, the nutrition field, login, and the `addFavorite` mutation. A fake TheMealDB client keeps the tests offline. Mapper tests lock the difficulty estimate.
+- `frontend` — Vite, React, TypeScript, MUI, Axios, Apollo Client. Vitest and React Testing Library cover the recipe card and the quick-login screen.
 
 On a host that sets `PORT`, the API binds `http://0.0.0.0:$PORT`.

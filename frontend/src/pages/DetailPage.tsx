@@ -11,11 +11,13 @@ import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import { errorMessage } from '../api/errors';
+import { useAuth } from '../auth/AuthProvider';
 import { ADD_FAVORITE, FAVORITE_IDS_QUERY, RECIPE_QUERY } from '../graphql/operations';
 import type { Recipe } from '../types';
-import { USER_ID } from '../user';
 
 export function DetailPage() {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
   const { id = '' } = useParams();
   const [saveError, setSaveError] = useState<string | null>(null);
   const recipeQuery = useQuery<{ recipe: Recipe }>(RECIPE_QUERY, {
@@ -23,7 +25,8 @@ export function DetailPage() {
     skip: id.length === 0,
   });
   const favoritesQuery = useQuery<{ favorites: { id: string }[] }>(FAVORITE_IDS_QUERY, {
-    variables: { userId: USER_ID },
+    variables: { userId },
+    skip: userId.length === 0,
   });
   const [addFavorite, addState] = useMutation(ADD_FAVORITE);
 
@@ -34,7 +37,7 @@ export function DetailPage() {
     setSaveError(null);
     try {
       await addFavorite({
-        variables: { userId: USER_ID, recipeId: id },
+        variables: { userId, recipeId: id },
         refetchQueries: ['FavoriteIds', 'Favorites'],
       });
     } catch (saveFailure: unknown) {
@@ -77,6 +80,9 @@ export function DetailPage() {
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 2 }}>
               {recipe.preparationTimeMinutes} min · {recipe.difficulty} · estimate
+              {recipe.nutrition
+                ? ` · ${Math.round(recipe.nutrition.calories)} kcal · ${recipe.nutrition.protein} g protein`
+                : ''}
             </Typography>
             <Button variant="contained" color="secondary" disabled={saved || addState.loading} onClick={onSave}>
               {saved ? 'Saved to favorites' : 'Save to favorites'}
