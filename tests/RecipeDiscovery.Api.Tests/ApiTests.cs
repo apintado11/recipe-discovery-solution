@@ -65,15 +65,39 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
             $$"""
             query {
               recipe(id: "{{FakeMealDbClient.KnownId}}") {
-                nutrition { calories protein }
+                nutrition {
+                  calories
+                  protein
+                  servings
+                  perServing { calories }
+                  macros { proteinPercent carbsPercent fatPercent }
+                  healthScore
+                  grade
+                  highlights { label positive }
+                  ingredients { name grams matched }
+                  matchedIngredients
+                  totalIngredients
+                }
               }
             }
             """);
 
         AssertNoErrors(document);
         var nutrition = document.RootElement.GetProperty("data").GetProperty("recipe").GetProperty("nutrition");
-        Assert.Equal(355, nutrition.GetProperty("calories").GetDouble());
-        Assert.Equal(8.5, nutrition.GetProperty("protein").GetDouble());
+        // 200 g dry pasta (742 kcal) + one lemon (17 kcal) + 2 tbsp olive oil (244 kcal).
+        Assert.Equal(1003, nutrition.GetProperty("calories").GetDouble());
+        Assert.Equal(26.7, nutrition.GetProperty("protein").GetDouble());
+        Assert.Equal(2, nutrition.GetProperty("servings").GetInt32());
+        Assert.Equal(502, nutrition.GetProperty("perServing").GetProperty("calories").GetDouble());
+        Assert.Equal(3, nutrition.GetProperty("matchedIngredients").GetInt32());
+        Assert.Equal(3, nutrition.GetProperty("totalIngredients").GetInt32());
+        Assert.Equal(200, nutrition.GetProperty("ingredients")[0].GetProperty("grams").GetDouble());
+        var macros = nutrition.GetProperty("macros");
+        var split = macros.GetProperty("proteinPercent").GetDouble()
+            + macros.GetProperty("carbsPercent").GetDouble()
+            + macros.GetProperty("fatPercent").GetDouble();
+        Assert.InRange(split, 99, 101);
+        Assert.InRange(nutrition.GetProperty("healthScore").GetInt32(), 0, 100);
 
         var rest = await _client.GetStringAsync($"/recipes/{FakeMealDbClient.KnownId}");
         Assert.DoesNotContain("nutrition", rest, StringComparison.OrdinalIgnoreCase);

@@ -12,11 +12,12 @@ import { useAuth } from '../auth/AuthProvider';
 import { CuisineChip } from '../components/CuisineChip';
 import { MenuRule } from '../components/MenuRule';
 import { MethodSteps } from '../components/MethodSteps';
+import { NutritionPanel } from '../components/NutritionPanel';
 import { ShoppingList } from '../components/ShoppingList';
 import { useLook } from '../LookProvider';
 import { panelSx } from '../theme';
 import { ADD_FAVORITE, FAVORITE_IDS_QUERY, RECIPE_QUERY } from '../graphql/operations';
-import type { Recipe } from '../types';
+import type { RecipeDetail } from '../types';
 
 export function DetailPage() {
   const { session } = useAuth();
@@ -24,7 +25,7 @@ export function DetailPage() {
   const userId = session?.user.id ?? '';
   const { id = '' } = useParams();
   const [saveError, setSaveError] = useState<string | null>(null);
-  const recipeQuery = useQuery<{ recipe: Recipe }>(RECIPE_QUERY, {
+  const recipeQuery = useQuery<{ recipe: RecipeDetail }>(RECIPE_QUERY, {
     variables: { id },
     skip: id.length === 0,
   });
@@ -111,7 +112,7 @@ export function DetailPage() {
             <Typography color="text.secondary" sx={{ mb: 2 }}>
               {recipe.preparationTimeMinutes} min · {recipe.difficulty} · estimate
               {recipe.nutrition
-                ? ` · ${Math.round(recipe.nutrition.calories)} kcal · ${recipe.nutrition.protein} g protein`
+                ? ` · ${Math.round(recipe.nutrition.perServing.calories)} kcal · ${Math.round(recipe.nutrition.perServing.protein)} g protein per serving`
                 : ''}
             </Typography>
             <Button variant="contained" color="secondary" disabled={saved || addState.loading} onClick={onSave}>
@@ -123,6 +124,11 @@ export function DetailPage() {
               </Alert>
             ) : null}
           </Box>
+          {recipe.nutrition ? (
+            <Box sx={{ gridColumn: { md: '1 / -1' } }}>
+              <NutritionPanel key={recipe.id} nutrition={recipe.nutrition} />
+            </Box>
+          ) : null}
           <Box
             sx={{
               gridColumn: { md: '1 / -1' },

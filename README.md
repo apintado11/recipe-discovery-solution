@@ -83,13 +83,29 @@ Answer: `tests/RecipeDiscovery.Api.Tests` (xUnit with `WebApplicationFactory`) c
 - Sorting.
 - Login and token rules.
 - The GraphQL `nutrition` field and the `addFavorite` mutation.
+- The nutrition estimate: measure parsing, food matching, servings, the score and the highlights.
 
-A fake TheMealDB client keeps the tests offline, and mapper tests lock down the difficulty estimate.
+There are 42 tests in all. A fake TheMealDB client keeps them offline, and mapper tests lock down the difficulty estimate.
 
 ### Bonus: GraphQL orchestration layer
 
 **19. Use GraphQL as the entry point that orchestrates a public REST API and enriches recipes (e.g. nutrition) by chaining calls in resolvers.**
-Answer: Implemented. `recipe(id)` and `recipes` load the meal from TheMealDB, by way of the catalog cache. A separate field resolver on `Recipe.nutrition` (`GraphQL/RecipeType.cs`) then calls `INutritionSource`, a small per-ingredient table, and returns `calories` and `protein`. The client gets one unified response. Nutrition exists only in GraphQL and is computed only when a query asks for it. The detail page displays it and labels it as an estimate.
+Answer: Implemented. `recipe(id)` and `recipes` load the meal from TheMealDB, by way of the catalog cache. A separate field resolver on `Recipe.nutrition` (`GraphQL/RecipeType.cs`) then calls `INutritionSource` for each recipe and adds a full nutrition profile. The client gets one unified response. Nutrition exists only in GraphQL and is computed only when a query asks for it.
+
+How the estimate works:
+- `MeasureParser` turns each ingredient's free-text measure into grams. It reads "200g", "1 ½ cups", "2 tbsp", "1/2 lb", "1 (12 oz.)", "2 large", ranges like "2-3", and "pinch" or "to taste".
+- `FoodTable` holds 135 common ingredients with values per 100 g, plus a unit weight and a density for converting volumes to weight. Matching uses the longest key, so "eggplant" isn't read as "egg" and "butter beans" isn't read as "butter".
+- `NutritionSource` adds it all up. It returns:
+  - Whole-recipe totals for calories, protein, carbs, fat, fiber, sugar and sodium.
+  - An estimated serving count, per-serving values, and percent of daily value.
+  - The calorie split between protein, carbs and fat.
+  - A 0–100 health score with an A–E grade, plus highlight tags such as "High protein", "Good fiber" and "High sodium".
+  - The share of each food group by weight, and a breakdown per ingredient.
+  - How many ingredients matched the table.
+
+The source sits behind `INutritionSource`, so a real nutrition API such as USDA FoodData Central could replace the table without changing the schema or the UI.
+
+The detail page turns this into a nutrition-tracker panel, described in [Part 2](#a-nutrition-tracker-on-every-recipe).
 
 ### Frontend: recipe browsing page
 
@@ -113,7 +129,7 @@ Answer: GraphQL `recipe(id)` through Apollo Client, including nested ingredients
 **25. Display all available recipe fields (description, prep time, difficulty).**
 Answer: The page shows:
 - The photo, name, cuisine, prep time and difficulty, with the estimate label.
-- Calories and protein.
+- A nutrition panel (see [Part 2](#a-nutrition-tracker-on-every-recipe)).
 - An ingredient shopping list.
 - The method, split into steps.
 
@@ -134,7 +150,7 @@ Answer: The solution goes one step further. A quick login screen lets you pick A
 Answer: REST through Axios handles login, the recipe list with search, filters, sort and paging, and the cuisine list.
 
 **30. Use GraphQL for at least one feature.**
-Answer: GraphQL through Apollo handles recipe details (with nutrition), saving favorites, and the favorites page.
+Answer: GraphQL through Apollo handles recipe details (with the full nutrition profile), saving favorites, and the favorites page (with calories and protein per serving on each card).
 
 **31. Show loading states with `CircularProgress` and errors with `Alert`.**
 Answer: Every page shows a `CircularProgress` on first load and an `Alert` on failure. When you change filters, a thin `LinearProgress` bar appears and the current results stay on screen, so the page doesn't flash.
@@ -168,7 +184,7 @@ Answer: A search `TextField` with a search `IconButton`. Typing waits 300 ms bef
 Answer: The whole frontend is TypeScript, and `npm run build` typechecks before building.
 
 **40. Unit tests with Jest or React Testing Library.**
-Answer: Vitest (a Jest-compatible runner) with React Testing Library. Seven test files and 17 tests cover the recipe card, the login screen, the layout switcher, the shopping list, method step parsing and navigation, and the flag lookup.
+Answer: Vitest (a Jest-compatible runner) with React Testing Library. Eight test files and 19 tests cover the recipe card, the login screen, the layout switcher, the shopping list, method step parsing and navigation, the flag lookup, and the nutrition panel, including servings rescaling.
 
 ### Deliverables
 
@@ -200,6 +216,19 @@ The app ships three complete looks, not just three color palettes. You can switc
 - **Quick cuisine strip.** A horizontally scrolling row of flag chips under the search bar sets the cuisine filter with one tap.
 - **Theme-specific navigation.** Journal uses a bottom tab bar, Editorial a sticky header with tabs, and Candlelight a floating dock. The page leaves bottom padding so the tab bar and dock never cover content or the page numbers.
 
+### A nutrition tracker on every recipe
+
+People who cook to eat well want answers to "how much protein is in this?" and "is it a good choice?" without doing the math. Every recipe page has a panel styled like a fitness-app dashboard, built from MUI and SVG and using the active theme's colors:
+
+- **Calorie ring:** calories per serving in the center, with the ring split by how much comes from protein, carbs and fat. Underneath is its share of a 2,000 kcal day.
+- **Daily value bars:** protein, carbs, fat, fiber, sugar and sodium per serving, each with the grams and a bar showing the percent of daily value.
+- **Health score:** an A–E grade on a ring, with green tags for good signs ("High protein", "Good fiber", "Veg-forward") and amber tags for warnings ("High sodium", "High sugar").
+- **Plate by weight:** a stacked bar showing how the recipe divides among grains, vegetables, protein, dairy and other groups.
+- **Biggest calorie sources:** the five ingredients that add the most calories, so you can see what to swap.
+- **Servings stepper:** changing the serving count rescales every number live, for batch cooking or meal prep.
+
+All values are labeled as estimates. The panel also shows how many ingredients matched the food table, so the confidence is visible. Saved recipe cards show calories and protein per serving.
+
 ### Flair and why it's there
 
 - **Country flags on cuisine chips.** Each cuisine chip shows its country's flag, and in two themes a stripe in the flag's colors. The images come from flagcdn because Windows doesn't render emoji flags.
@@ -213,7 +242,7 @@ Backend:
 - Search by recipe name, plus sorting by name, prep time or difficulty, on both REST and GraphQL.
 - An in-memory catalog cache, so TheMealDB is called 26 times on the first request and not again after that.
 - Per-user tokens, with 401 and 403 rules on favorites.
-- GraphQL-only nutrition enrichment through a chained field resolver.
+- GraphQL-only nutrition enrichment through a chained field resolver. It parses measures into grams and returns macros, fiber, sugar, sodium, servings, daily values, a health score and grade, highlights, food groups and a per-ingredient breakdown.
 - Swagger UI, problem-details errors, and a 503 response when TheMealDB is down.
 
 Frontend:
@@ -224,7 +253,7 @@ Frontend:
 - Flag chips for every cuisine.
 - **Shopping list** on the detail page. The ingredients list leads with the amount, and each item can be checked off with a "packed" progress bar and a "Clear checks" button.
 - **Step-by-step method.** The instructions are split into numbered steps with Previous and Next buttons, and times and amounts are highlighted in the text.
-- Nutrition (calories and protein) on the detail page.
+- A nutrition-tracker panel on the detail page: calorie ring, daily value bars, health score, food-group breakdown, top calorie sources and a servings stepper.
 - Detail links that survive a page refresh in dev, thanks to the Vite proxy bypass.
 - Accessible labels on every icon button, `aria-pressed` on toggles, and labeled loading indicators. The tests query by these labels.
 - `design-mockups/index.html`, the three static phone mockups the themes were built from.
@@ -309,6 +338,15 @@ query RecipeById {
     nutrition {
       calories
       protein
+      servings
+      perServing { calories protein carbs fat fiber sugar sodium }
+      dailyValues { calories protein carbs fat fiber sodium }
+      macros { proteinPercent carbsPercent fatPercent }
+      healthScore
+      grade
+      highlights { label positive }
+      foodGroups { group percent }
+      ingredients { name measure grams calories matched }
     }
   }
 }

@@ -159,7 +159,8 @@ function RecipePanel(props: VariantProps) {
           <Typography sx={metaSx(look, look.card.inkSoft)}>{recipeMeta(recipe)}</Typography>
           {recipe.nutrition ? (
             <Typography sx={metaSx(look, look.card.inkSoft)}>
-              {Math.round(recipe.nutrition.calories)} kcal · {recipe.nutrition.protein} g protein
+              {Math.round(recipe.nutrition.perServing.calories)} kcal · {Math.round(recipe.nutrition.perServing.protein)} g protein
+              per serving
             </Typography>
           ) : null}
           {preview ? (

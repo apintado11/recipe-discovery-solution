@@ -16,5 +16,8 @@ const authLink = setContext((_, { headers }) => {
 
 export const apolloClient = new ApolloClient({
   link: authLink.concat(new HttpLink({ uri: apiUrl ? `${apiUrl}/graphql` : '/graphql' })),
-  cache: new InMemoryCache(),
+  cache: new InMemoryCache({
+    // Nutrition has no id. The detail and favorites queries select different parts of it, so merge them.
+    typePolicies: { Nutrition: { merge: true }, NutritionFacts: { merge: true } },
+  }),
 });
