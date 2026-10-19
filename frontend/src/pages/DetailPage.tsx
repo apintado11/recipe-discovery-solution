@@ -4,14 +4,13 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import { errorMessage } from '../api/errors';
 import { useAuth } from '../auth/AuthProvider';
+import { MethodSteps } from '../components/MethodSteps';
+import { ShoppingList } from '../components/ShoppingList';
 import { ADD_FAVORITE, FAVORITE_IDS_QUERY, RECIPE_QUERY } from '../graphql/operations';
 import type { Recipe } from '../types';
 
@@ -93,23 +92,17 @@ export function DetailPage() {
               </Alert>
             ) : null}
           </Box>
-          <Box>
-            <Typography variant="h3" sx={{ fontSize: '1.5rem', mb: 1 }}>
-              Ingredients
-            </Typography>
-            <List>
-              {recipe.ingredients.map((ingredient) => (
-                <ListItem key={`${ingredient.name}-${ingredient.measure}`} disableGutters>
-                  <ListItemText primary={ingredient.name} secondary={ingredient.measure || undefined} />
-                </ListItem>
-              ))}
-            </List>
-          </Box>
-          <Box>
-            <Typography variant="h3" sx={{ fontSize: '1.5rem', mb: 1 }}>
-              Method
-            </Typography>
-            <Typography sx={{ whiteSpace: 'pre-line' }}>{recipe.description}</Typography>
+          <Box
+            sx={{
+              gridColumn: { md: '1 / -1' },
+              display: 'grid',
+              gap: 3,
+              alignItems: 'start',
+              gridTemplateColumns: { xs: '1fr', md: 'minmax(260px, 340px) 1fr' },
+            }}
+          >
+            <ShoppingList key={recipe.id} ingredients={recipe.ingredients} />
+            <MethodSteps key={recipe.id} description={recipe.description} />
           </Box>
         </Box>
       ) : null}
