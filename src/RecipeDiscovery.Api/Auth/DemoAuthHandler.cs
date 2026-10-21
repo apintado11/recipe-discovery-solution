@@ -10,15 +10,18 @@ public sealed class DemoAuthHandler : AuthenticationHandler<AuthenticationScheme
     public const string SchemeName = "DemoBearer";
 
     private readonly DemoTokenService _tokens;
+    private readonly AccountStore _accounts;
 
     public DemoAuthHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
-        DemoTokenService tokens)
+        DemoTokenService tokens,
+        AccountStore accounts)
         : base(options, logger, encoder)
     {
         _tokens = tokens;
+        _accounts = accounts;
     }
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -35,16 +38,18 @@ public sealed class DemoAuthHandler : AuthenticationHandler<AuthenticationScheme
             return Task.FromResult(AuthenticateResult.Fail("Authorization must be a Bearer token."));
         }
 
-        var user = _tokens.Read(header[prefix.Length..].Trim());
-        if (user is null)
+        var issued = _tokens.Read(header[prefix.Length..].Trim());
+        if (issued is null || _accounts.IsRevoked(issued.Jti) || !_accounts.HasPasswordVersion(issued.User.Id, issued.PasswordVersion))
         {
             return Task.FromResult(AuthenticateResult.Fail("The login token is invalid."));
         }
 
+        var user = issued.User;
         var identity = new ClaimsIdentity(
             [
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.Username)
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Email, user.Email)
             ],
             SchemeName);
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName);

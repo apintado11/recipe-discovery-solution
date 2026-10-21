@@ -4,6 +4,8 @@ using System.Text.Json;
 
 namespace RecipeDiscovery.Api.Auth;
 
+public sealed record IssuedToken(DemoUser User, string Jti, int PasswordVersion, long Expires);
+
 public sealed class DemoTokenService
 {
     private readonly byte[] _key;
@@ -19,19 +21,23 @@ public sealed class DemoTokenService
         _key = Encoding.UTF8.GetBytes(secret);
     }
 
-    public string Create(DemoUser user)
+    public string Create(DemoUser user, int passwordVersion)
     {
         var header = Encode(new { alg = "HS256", typ = "JWT" });
+        var jti = Guid.NewGuid().ToString("N");
         var payload = Encode(new
         {
             sub = user.Id,
             username = user.Username,
+            email = user.Email,
+            ver = passwordVersion,
+            jti,
             exp = DateTimeOffset.UtcNow.AddHours(12).ToUnixTimeSeconds()
         });
         return $"{header}.{payload}.{Sign($"{header}.{payload}")}";
     }
 
-    public DemoUser? Read(string token)
+    public IssuedToken? Read(string token)
     {
         var parts = token.Split('.');
         if (parts.Length != 3)
@@ -68,14 +74,17 @@ public sealed class DemoTokenService
 
             var id = root.GetProperty("sub").GetString();
             var username = root.GetProperty("username").GetString();
-            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(username))
+            var email = root.GetProperty("email").GetString();
+            var jti = root.GetProperty("jti").GetString();
+            var version = root.GetProperty("ver").GetInt32();
+            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(jti))
             {
                 return null;
             }
 
-            return new DemoUser(id, username);
+            return new IssuedToken(new DemoUser(id, username, email), jti, version, expires);
         }
-        catch (Exception exception) when (exception is JsonException or KeyNotFoundException or FormatException)
+        catch (Exception exception) when (exception is JsonException or KeyNotFoundException or FormatException or InvalidOperationException)
         {
             return null;
         }

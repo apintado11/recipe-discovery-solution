@@ -8,3 +8,4 @@ TestResults/
 frontend/node_modules/
 frontend/dist/
 frontend/.env.local
+src/RecipeDiscovery.Api/data/

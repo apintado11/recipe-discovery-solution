@@ -1,3 +1,4 @@
+using RecipeDiscovery.Api.Auth;
 using RecipeDiscovery.Api.Contracts;
 
 namespace RecipeDiscovery.Api.Services;
@@ -5,11 +6,13 @@ namespace RecipeDiscovery.Api.Services;
 public sealed class FavoriteService : IFavoriteService
 {
     private readonly FavoriteStore _store;
+    private readonly AccountStore _accounts;
     private readonly IRecipeService _recipes;
 
-    public FavoriteService(FavoriteStore store, IRecipeService recipes)
+    public FavoriteService(FavoriteStore store, AccountStore accounts, IRecipeService recipes)
     {
         _store = store;
+        _accounts = accounts;
         _recipes = recipes;
     }
 
@@ -64,7 +67,7 @@ public sealed class FavoriteService : IFavoriteService
             throw new ForbiddenException("You can only use your own favorites.");
         }
 
-        if (!_store.UserExists(key))
+        if (!_accounts.UserExists(key))
         {
             throw new NotFoundException($"User '{key}' was not found.");
         }

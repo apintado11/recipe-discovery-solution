@@ -170,9 +170,9 @@ public sealed class ApiTests : IClassFixture<ApiFactory>
         Assert.Contains("missing", error.GetProperty("message").GetString(), StringComparison.Ordinal);
     }
 
-    private async Task LoginAsync(string username = "alex")
+    private async Task LoginAsync()
     {
-        var response = await _client.PostAsJsonAsync("/auth/login", new { username });
+        var response = await _client.PostAsJsonAsync("/auth/login", new { email = "alex@recipe.test", password = "cookbook" });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
         var token = payload.GetProperty("token").GetString();

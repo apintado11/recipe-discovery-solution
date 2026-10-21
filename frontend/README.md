@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173` and choose Alex, Blair, or Casey. Log out to switch.
+Open `http://localhost:5173` and sign in. Sample kitchens: `alex@recipe.test`, `blair@recipe.test`, and `casey@recipe.test`, password `cookbook`. Create an account from the sign-in screen, reset a password from the local inbox, and log out from the account menu.
 
 ```bash
 npm test
@@ -28,7 +28,7 @@ MUI supplies the shell and the interactive pieces: `Container` and `Box` for lay
 
 There are three themes: Field Journal, Cookbook Editorial, and Candlelight. Each is a token object (`Look`) in `src/theme.ts`, turned into an MUI theme by `buildTheme` and provided by `LookProvider`. Components read tokens through `useLook()` and style with `sx`, so there are no CSS files. The palette button in the header and the buttons on the login screen switch themes, and the choice is saved in `localStorage`. DM Sans, Fraunces, Instrument Serif, and Caveat are loaded from Google Fonts. Country flags come from flagcdn, because Windows does not render emoji flags.
 
-The login screen gates the routes. The token from `POST /auth/login` is kept in `sessionStorage` and attached to Axios and Apollo requests. Logging out clears that token and the Apollo cache.
+The sign-in screen gates the app. `POST /auth/login` and `POST /auth/register` return a token kept in `sessionStorage` and attached to Axios and Apollo requests. Logout calls `POST /auth/logout`, which revokes that token, and clears the Apollo cache. Forgot-password uses the local inbox in Development. Routes: `/login`, `/register`, `/forgot-password`, and `/reset-password`.
 
 Routing is React Router: `/` is the list, `/recipes/:id` is the detail page, `/favorites` is the saved list.
 

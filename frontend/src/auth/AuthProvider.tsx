@@ -1,12 +1,13 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import { loginRequest } from '../api/auth';
+import { loginRequest, logoutRequest, registerRequest } from '../api/auth';
 import { apolloClient } from '../graphql/client';
-import { readSession, writeSession, type Session } from './session';
+import { readSession, writeSession, type RegisterInput, type Session } from './session';
 
 type AuthContextValue = {
   session: Session | null;
-  login: (username: string) => Promise<void>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  register: (input: RegisterInput) => Promise<void>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -17,21 +18,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
-      async login(username: string) {
-        const next = await loginRequest(username);
-        writeSession(next);
-        setSession(next);
+      async login(email: string, password: string) {
+        await adopt(await loginRequest(email.trim(), password), setSession);
       },
-      logout() {
+      async register(input: RegisterInput) {
+        await adopt(
+          await registerRequest({
+            name: input.name.trim(),
+            email: input.email.trim(),
+            password: input.password,
+          }),
+          setSession,
+        );
+      },
+      async logout() {
+        try {
+          if (readSession()) {
+            await logoutRequest();
+          }
+        } catch {
+          // The session still ends on this device if the API is unreachable.
+        }
         writeSession(null);
         setSession(null);
-        void apolloClient.clearStore();
+        await apolloClient.clearStore();
       },
     }),
     [session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+async function adopt(next: Session, setSession: (session: Session) => void) {
+  writeSession(next);
+  setSession(next);
+  await apolloClient.clearStore();
 }
 
 export function useAuth() {

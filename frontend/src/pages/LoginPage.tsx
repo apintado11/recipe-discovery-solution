@@ -2,100 +2,110 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-import Paper from '@mui/material/Paper';
+import Link from '@mui/material/Link';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useEffect, useState } from 'react';
-import { fetchDemoUsers } from '../api/auth';
+import { useState, type FormEvent } from 'react';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { errorMessage } from '../api/errors';
 import { useAuth } from '../auth/AuthProvider';
-import { displayName, type DemoUser } from '../auth/session';
-import { PageHero } from '../components/PageHero';
-import { ThemeSwatches } from '../components/ThemePicker';
+import { sampleKitchens, samplePassword } from '../auth/session';
+import { AuthShell, PasswordField } from '../components/AuthShell';
 import { useLook } from '../LookProvider';
-import { panelSx } from '../theme';
 
 export function LoginPage() {
   const { login } = useAuth();
   const look = useLook();
-  const [users, setUsers] = useState<DemoUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [pending, setPending] = useState<string | null>(null);
+  const location = useLocation();
+  const notice = (location.state as { notice?: string } | null)?.notice ?? '';
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchDemoUsers()
-      .then((next) => {
-        if (!controller.signal.aborted) {
-          setUsers(next);
-        }
-      })
-      .catch((fetchError: unknown) => {
-        if (!controller.signal.aborted) {
-          setError(errorMessage(fetchError));
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      });
-    return () => controller.abort();
-  }, []);
-
-  async function onLogin(username: string) {
-    setPending(username);
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    setPending(true);
     setError(null);
     try {
-      await login(username);
+      await login(email, password);
     } catch (loginError: unknown) {
       setError(errorMessage(loginError));
     } finally {
-      setPending(null);
+      setPending(false);
     }
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2, py: 4 }}>
-      <Paper elevation={0} sx={{ ...panelSx(look), width: '100%', maxWidth: 460, p: { xs: 3.5, sm: 4.5 } }}>
-        <PageHero copy={look.copy.login}>
-          Pick a demo cook. Each person keeps a separate favorites list. This sign-in issues a short-lived token. There is no
-          password.
-        </PageHero>
-        {loading ? (
-          <Box role="status" aria-live="polite" sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-            <CircularProgress aria-label="Loading accounts" />
-          </Box>
-        ) : null}
-        {error ? (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        ) : null}
-        <Box sx={{ display: 'grid', gap: 1.25 }}>
-          {users.map((user) => (
-            <Button
-              key={user.id}
-              variant="outlined"
-              disabled={pending !== null}
-              onClick={() => onLogin(user.username)}
-              sx={{
-                justifyContent: 'flex-start',
-                py: 1.25,
-                px: 2,
-                color: 'text.primary',
-                '&:hover': { borderColor: look.ink, bgcolor: look.field },
-              }}
-            >
-              {pending === user.username ? 'Signing in' : `Continue as ${displayName(user.username)}`}
-            </Button>
-          ))}
-        </Box>
-        <Typography sx={{ mt: 3, mb: 1, fontSize: '0.72rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'text.secondary' }}>
-          Theme
-        </Typography>
-        <ThemeSwatches />
-      </Paper>
-    </Box>
+    <AuthShell kicker="Sign in" copy={look.copy.login} blurb="Each kitchen keeps its own favorites. Sign in with email, or create an account.">
+      {notice ? (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {notice}
+        </Alert>
+      ) : null}
+      {error ? (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      ) : null}
+      <Box component="form" onSubmit={onSubmit} sx={{ display: 'grid', gap: 2 }}>
+        <TextField
+          label="Email"
+          type="email"
+          name="email"
+          autoComplete="email"
+          autoFocus
+          required
+          fullWidth
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+        <PasswordField label="Password" name="password" autoComplete="current-password" value={password} onChange={setPassword} />
+        <Button type="submit" variant="contained" size="large" disabled={pending}>
+          {pending ? <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} aria-label="Signing in" /> : null}
+          {pending ? 'Signing in' : 'Sign in'}
+        </Button>
+      </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 2 }}>
+        <Link component={RouterLink} to="/forgot-password" underline="hover" sx={{ color: look.ink, fontWeight: 600 }}>
+          Forgot password?
+        </Link>
+        <Link component={RouterLink} to="/register" underline="hover" sx={{ color: look.ink, fontWeight: 600 }}>
+          Create an account
+        </Link>
+      </Box>
+      <Typography sx={{ mt: 3, mb: 1, fontSize: '0.72rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'text.secondary' }}>
+        Sample kitchens
+      </Typography>
+      <Box component="section" aria-label="Sample kitchens" sx={{ display: 'grid', gap: 1 }}>
+        {sampleKitchens.map((kitchen) => (
+          <Button
+            key={kitchen.email}
+            type="button"
+            variant="outlined"
+            onClick={() => {
+              setEmail(kitchen.email);
+              setPassword(samplePassword);
+              setError(null);
+            }}
+            sx={{
+              justifyContent: 'space-between',
+              py: 1.1,
+              px: 2,
+              color: 'text.primary',
+              '&:hover': { borderColor: look.ink, bgcolor: look.field },
+            }}
+          >
+            <span>{kitchen.name}</span>
+            <Box component="span" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+              {kitchen.email}
+            </Box>
+          </Button>
+        ))}
+      </Box>
+      <Typography sx={{ mt: 1.25, color: 'text.secondary', fontSize: '0.85rem' }}>
+        Fills the form. The shared password is {samplePassword}.
+      </Typography>
+    </AuthShell>
   );
 }

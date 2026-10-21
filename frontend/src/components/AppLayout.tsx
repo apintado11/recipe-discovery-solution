@@ -25,7 +25,7 @@ function greeting(now = new Date()) {
   return 'Good evening';
 }
 
-function AccountButton({ name, look, onLogout }: { name: string; look: Look; onLogout: () => void }) {
+function AccountButton({ name, email, look, onLogout }: { name: string; email: string; look: Look; onLogout: () => void }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const initial = name.slice(0, 1).toUpperCase();
 
@@ -71,7 +71,12 @@ function AccountButton({ name, look, onLogout }: { name: string; look: Look; onL
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         slotProps={{ paper: { sx: { mt: 1, minWidth: 200 } } }}
       >
-        <Typography sx={{ px: 2, py: 1, color: 'text.secondary', fontSize: '0.85rem' }}>Signed in as {name}</Typography>
+        <Box sx={{ px: 2, pt: 1, pb: 0.5, maxWidth: 260 }}>
+          <Typography sx={{ fontWeight: 700 }}>{name}</Typography>
+          {email ? (
+            <Typography sx={{ color: 'text.secondary', fontSize: '0.8rem', wordBreak: 'break-all' }}>{email}</Typography>
+          ) : null}
+        </Box>
         <MenuItem
           onClick={() => {
             setAnchor(null);
@@ -88,11 +93,11 @@ function AccountButton({ name, look, onLogout }: { name: string; look: Look; onL
   );
 }
 
-function Controls({ name, look, onLogout }: { name: string; look: Look; onLogout: () => void }) {
+function Controls({ name, email, look, onLogout }: { name: string; email: string; look: Look; onLogout: () => void }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
       <ThemeMenuButton color={look.ink} />
-      <AccountButton name={name} look={look} onLogout={onLogout} />
+      <AccountButton name={name} email={email} look={look} onLogout={onLogout} />
     </Box>
   );
 }
@@ -183,7 +188,7 @@ function JournalTabBar({ items, look }: { items: NavItem[]; look: Look }) {
   );
 }
 
-function JournalHeader({ items, look, name, onLogout }: HeaderProps) {
+function JournalHeader({ items, look, name, email, onLogout }: HeaderProps) {
   return (
     <Box component="header" sx={{ pt: { xs: 2, md: 2.5 }, pb: { xs: 1, md: 2 } }}>
       <Container sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -208,7 +213,7 @@ function JournalHeader({ items, look, name, onLogout }: HeaderProps) {
         </Box>
         <JournalPill items={items} look={look} />
         <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-          <Controls name={name} look={look} onLogout={onLogout} />
+          <Controls name={name} email={email} look={look} onLogout={onLogout} />
         </Box>
       </Container>
       <JournalTabBar items={items} look={look} />
@@ -216,7 +221,7 @@ function JournalHeader({ items, look, name, onLogout }: HeaderProps) {
   );
 }
 
-function EditorialHeader({ items, look, name, onLogout }: HeaderProps) {
+function EditorialHeader({ items, look, name, email, onLogout }: HeaderProps) {
   return (
     <Box component="header" sx={{ position: 'sticky', top: 0, zIndex: 1100, ...look.background, backgroundAttachment: 'fixed', pt: 1.5 }}>
       <Container>
@@ -231,7 +236,7 @@ function EditorialHeader({ items, look, name, onLogout }: HeaderProps) {
               Discovery
             </Box>
           </Typography>
-          <Controls name={name} look={look} onLogout={onLogout} />
+          <Controls name={name} email={email} look={look} onLogout={onLogout} />
         </Box>
         <Box component="nav" aria-label="Primary" sx={{ display: 'flex', gap: 3, borderBottom: `1px solid ${look.line}` }}>
           {items.map((item) => (
@@ -259,7 +264,7 @@ function EditorialHeader({ items, look, name, onLogout }: HeaderProps) {
   );
 }
 
-function CandleHeader({ items, look, name, onLogout }: HeaderProps) {
+function CandleHeader({ items, look, name, email, onLogout }: HeaderProps) {
   return (
     <Box component="header" sx={{ pt: { xs: 2, md: 3 }, pb: 1 }}>
       <Container sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -273,7 +278,7 @@ function CandleHeader({ items, look, name, onLogout }: HeaderProps) {
             {name}&apos;s kitchen
           </Typography>
         </Box>
-        <Controls name={name} look={look} onLogout={onLogout} />
+        <Controls name={name} email={email} look={look} onLogout={onLogout} />
       </Container>
       <Box
         component="nav"
@@ -323,7 +328,7 @@ function CandleHeader({ items, look, name, onLogout }: HeaderProps) {
   );
 }
 
-type HeaderProps = { items: NavItem[]; look: Look; name: string; onLogout: () => void };
+type HeaderProps = { items: NavItem[]; look: Look; name: string; email: string; onLogout: () => void };
 
 const HEADERS: Record<Look['nav'], typeof JournalHeader> = {
   journal: JournalHeader,
@@ -336,6 +341,7 @@ export function AppLayout() {
   const look = useLook();
   const onFavorites = Boolean(useMatch('/favorites'));
   const name = session ? displayName(session.user.username) : '';
+  const email = session?.user.email ?? '';
   const items: NavItem[] = [
     { to: '/', label: 'Recipes', short: 'recipes', icon: MenuBookOutlinedIcon, current: !onFavorites },
     { to: '/favorites', label: 'Favorites', short: 'saved', icon: FavoriteBorderIcon, current: onFavorites },
@@ -345,7 +351,7 @@ export function AppLayout() {
 
   return (
     <Box sx={{ minHeight: '100vh' }}>
-      <Header items={items} look={look} name={name} onLogout={logout} />
+      <Header items={items} look={look} name={name} email={email} onLogout={() => void logout()} />
       <Container component="main" sx={{ pt: { xs: 1.5, md: 3 }, pb: bottomSpace }}>
         <Outlet />
       </Container>

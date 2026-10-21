@@ -22,7 +22,7 @@ Each item below is a line from the brief, followed by what this solution does ab
 Answer: `Contracts/Recipe.cs` has all seven fields (`Id`, `Name`, `Description`, `Ingredients` as a list of name and measure pairs, `Cuisine`, `PreparationTimeMinutes`, `Difficulty`) plus `ImageUrl`. TheMealDB has no prep time or difficulty, so `RecipeMapper` estimates both from the ingredient count and instruction length. The UI labels them as estimates. The exact formula is under [Design notes](#mapping-themealdb-to-a-recipe).
 
 **2. User: ID, Username, Favorite Recipes (list of Recipe IDs).**
-Answer: There are three demo users, Alex (`1`), Blair (`2`) and Casey (`3`), each with an id and username (`Auth/DemoUser.cs`). Each user's favorites are stored as a list of recipe ids keyed by user id (`Services/FavoriteStore.cs`). Favorites are tied to the signed-in account, and one user can't read or change another user's list.
+Answer: Accounts live in `Auth/AccountStore.cs`. Each one has an id, a display name, an email, and a hashed password. Three sample kitchens are seeded: Alex (`alex@recipe.test`), Blair (`blair@recipe.test`) and Casey (`casey@recipe.test`), all with the password `cookbook`. Favorites are still a list of recipe ids keyed by user id (`Services/FavoriteStore.cs`). One person can't read or change another person's list. New accounts are created from the register screen, and on a normal run they are saved to `data/accounts.json` so they survive an API restart. That file is local and gitignored.
 
 ### Backend: REST API
 
@@ -75,7 +75,7 @@ Answer: Both, in a sense. Recipes come from TheMealDB's public API and are cache
 Answer: Both, on REST and GraphQL. You can sort by name, prep time or difficulty, ascending or descending. Results are paged after filtering and sorting: 12 per page by default, 24 maximum.
 
 **17. Simple authentication (API key or JWT simulation).**
-Answer: A JWT-style HMAC token. `POST /auth/login` with `{ "username": "alex" }` returns a token that expires in 12 hours. Favorite routes require it as `Authorization: Bearer <token>`, and the user id in the URL has to match the token. There are no passwords; this is a demo login.
+Answer: Email and password, with a signed HMAC token that expires in 12 hours. `POST /auth/register` creates an account, `POST /auth/login` checks the password, and `POST /auth/logout` revokes that token. Passwords are stored as PBKDF2 hashes. `POST /auth/forgot-password` starts a 30-minute reset, and `POST /auth/reset-password` sets the new password and signs every existing session out. In Development the reset message is delivered to a local inbox (`GET /auth/mailbox`) instead of a real mail server, and the reset screen reads the link. Favorite routes require `Authorization: Bearer <token>`, and the user id in the URL has to match the token. Changing the password invalidates older tokens.
 
 **18. Unit tests for at least one REST endpoint and one GraphQL resolver.**
 Answer: `tests/RecipeDiscovery.Api.Tests` (xUnit with `WebApplicationFactory`) covers:
@@ -85,7 +85,7 @@ Answer: `tests/RecipeDiscovery.Api.Tests` (xUnit with `WebApplicationFactory`) c
 - The GraphQL `nutrition` field and the `addFavorite` mutation.
 - The nutrition estimate: measure parsing, food matching, servings, the score and the highlights.
 
-There are 42 tests in all. A fake TheMealDB client keeps them offline, and mapper tests lock down the difficulty estimate.
+There are 47 tests in all. A fake TheMealDB client keeps them offline, and mapper tests lock down the difficulty estimate.
 
 ### Bonus: GraphQL orchestration layer
 
@@ -142,7 +142,7 @@ Answer: Every card has a heart `IconButton`, and the detail page has a "Save to 
 Answer: The `/favorites` page uses the GraphQL `favorites(userId)` query and the same card layouts as browse.
 
 **28. Use a hardcoded `userId` (e.g. `"1"`) for simplicity.**
-Answer: The solution goes one step further. A quick login screen lets you pick Alex, Blair or Casey, and the user id comes from the signed-in token. That makes it possible to show that favorites really are per user. Logging out clears the token and the Apollo cache, so the next person starts with their own list.
+Answer: The solution goes one step further. Sign-in is email and password, and the user id comes from the signed-in token. That makes it possible to show that favorites really are per person. Logging out revokes the token and clears the Apollo cache, so the next person starts with their own list. A forgotten password can be reset from the local inbox.
 
 ### Frontend: API integration
 
@@ -167,7 +167,7 @@ Answer: Every control is MUI: `Container`, `Box`, `Typography`, `Card`, `TextFie
 Answer: All styling goes through an MUI theme built from design tokens (`src/theme.ts`) and the `sx` prop. The app has no CSS files. The three themes are three token sets fed into the same `createTheme`.
 
 **35. React Router for navigation.**
-Answer: React Router 6. `/` is browse, `/recipes/:id` is the detail page, `/favorites` is the saved list, and the login screen gates all three.
+Answer: React Router 6. Signed-out routes are `/login`, `/register`, `/forgot-password`, and `/reset-password`. After sign-in, `/` is browse, `/recipes/:id` is the detail page, and `/favorites` is the saved list.
 
 **36. State with React hooks or a library.**
 Answer: React hooks and context (`useState`, `useEffect`, `useMemo`, a session context and a theme context), with Apollo's cache for GraphQL data. No Redux was needed.
@@ -184,7 +184,7 @@ Answer: A search `TextField` with a search `IconButton`. Typing waits 300 ms bef
 Answer: The whole frontend is TypeScript, and `npm run build` typechecks before building.
 
 **40. Unit tests with Jest or React Testing Library.**
-Answer: Vitest (a Jest-compatible runner) with React Testing Library. Eight test files and 19 tests cover the recipe card, the login screen, the layout switcher, the shopping list, method step parsing and navigation, the flag lookup, and the nutrition panel, including servings rescaling.
+Answer: Vitest (a Jest-compatible runner) with React Testing Library. Eight test files and 20 tests cover the recipe card, the login screen, the layout switcher, the shopping list, method step parsing and navigation, the flag lookup, and the nutrition panel, including servings rescaling.
 
 ### Deliverables
 
@@ -246,7 +246,7 @@ Backend:
 - Swagger UI, problem-details errors, and a 503 response when TheMealDB is down.
 
 Frontend:
-- A demo login for Alex, Blair and Casey with separate favorites lists, instead of a hardcoded user.
+- Email sign-in, account creation, logout, and password reset. Sample kitchens are Alex, Blair, and Casey. Their password is `cookbook`. In Development, reset mail shows up in a local inbox on the forgot-password screen.
 - Three complete, switchable themes, saved between visits.
 - List, card and compact layouts, saved between visits.
 - A phone filter drawer, a quick cuisine strip and an active-filter count.
@@ -283,7 +283,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. The first screen is a quick login for Alex, Blair or Casey, and each person has their own favorites. Log out from the account menu to switch users, and change the look with the palette button. The Vite dev server proxies `/auth`, `/recipes`, `/cuisines`, `/users` and `/graphql` to the API. To call the API from another origin, set `VITE_API_URL` (see `frontend/.env.example`). The API allows `http://localhost:5173`.
+Open `http://localhost:5173`. Sign in with email and password, or create an account. The sample kitchens are `alex@recipe.test`, `blair@recipe.test`, and `casey@recipe.test`, and the password for each is `cookbook`. The buttons on the sign-in screen fill those in. Log out from the account menu. Forgot password delivers the reset link to a local inbox on that page, because there is no mail server. Accounts are saved in `src/RecipeDiscovery.Api/data/accounts.json` and survive an API restart. Change the look with the palette button. The Vite dev server proxies `/auth`, `/recipes`, `/cuisines`, `/users` and `/graphql` to the API. To call the API from another origin, set `VITE_API_URL` (see `frontend/.env.example`). The API allows `http://localhost:5173`.
 
 Tests:
 
@@ -296,13 +296,13 @@ cd frontend && npm test
 
 | Page | Protocol | Call |
 | --- | --- | --- |
-| Sign in | REST | `POST /auth/login` |
+| Sign in, register, logout, password reset | REST | `POST /auth/login`, `/auth/register`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password` |
 | Browse, search, sort | REST | `GET /recipes` and `GET /cuisines` |
 | Save a favorite | GraphQL | `addFavorite` |
 | Recipe detail, including nutrition | GraphQL | `recipe(id)` |
 | Favorites | GraphQL | `favorites(userId)` |
 
-The UI won't show recipes until you pick a demo user. Favorite routes require that user's token. Recipe reads stay open, so the samples below work without one.
+The UI won't show recipes until you sign in. Favorite routes require that person's token. Recipe reads stay open, so the samples below work without one.
 
 ### Sample requests
 
@@ -312,7 +312,7 @@ curl "http://localhost:5080/recipes/52772"
 
 TOKEN=$(curl -s -X POST "http://localhost:5080/auth/login" \
   -H "Content-Type: application/json" \
-  -d '{"username":"alex"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+  -d '{"email":"alex@recipe.test","password":"cookbook"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
 
 curl -X POST "http://localhost:5080/users/1/favorites" \
   -H "Authorization: Bearer $TOKEN" \

@@ -41,7 +41,9 @@ builder.Services.AddHttpClient<IMealDbClient, MealDbClient>(client =>
     client.DefaultRequestHeaders.UserAgent.ParseAdd("RecipeDiscovery/1.0");
 });
 
+builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.Section));
 builder.Services.AddSingleton<RecipeCache>();
+builder.Services.AddSingleton<AccountStore>();
 builder.Services.AddSingleton<FavoriteStore>();
 builder.Services.AddSingleton<DemoTokenService>();
 builder.Services.AddSingleton<IRecipeService, RecipeService>();
